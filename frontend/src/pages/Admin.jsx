@@ -392,20 +392,20 @@ const Admin = () => {
                 {/* Users Tab */}
 
                 {/* Users Tab */}
-                {activeTab === 'users' && <UsersTab showMessage={showMessage} />}
+                {activeTab === 'users' && <UsersTab colleges={colleges} departments={departments} showMessage={showMessage} />}
             </div>
         </div>
     );
 };
 
 // Users Tab Component
-const UsersTab = ({ showMessage }) => {
+const UsersTab = ({ colleges, departments, showMessage }) => {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showAddForm, setShowAddForm] = useState(false);
-    const [newUser, setNewUser] = useState({ email: '', password: '', role: 'assistant' });
+    const [newUser, setNewUser] = useState({ email: '', password: '', role: 'assistant', department_id: '' });
     const [editingUser, setEditingUser] = useState(null);
-    const [editForm, setEditForm] = useState({ email: '', password: '', role: '' });
+    const [editForm, setEditForm] = useState({ email: '', password: '', role: '', department_id: '' });
 
     useEffect(() => { loadUsers(); }, []);
 
@@ -418,8 +418,8 @@ const UsersTab = ({ showMessage }) => {
     const handleAddUser = async () => {
         if (!newUser.email || !newUser.password) return;
         try {
-            await api.createUser(newUser.email, newUser.password, newUser.role);
-            setNewUser({ email: '', password: '', role: 'assistant' });
+            await api.createUser(newUser.email, newUser.password, newUser.role, newUser.department_id || null);
+            setNewUser({ email: '', password: '', role: 'assistant', department_id: '' });
             setShowAddForm(false);
             await loadUsers();
             showMessage('success', 'User created successfully!');
@@ -433,7 +433,7 @@ const UsersTab = ({ showMessage }) => {
 
     const handleEditClick = (user) => {
         setEditingUser(user);
-        setEditForm({ email: user.email, password: '', role: user.role });
+        setEditForm({ email: user.email, password: '', role: user.role, department_id: user.department_id || '' });
     };
 
     const handleEditSubmit = async () => {
@@ -441,9 +441,10 @@ const UsersTab = ({ showMessage }) => {
         try {
             const updates = { email: editForm.email, role: editForm.role };
             if (editForm.password) updates.password = editForm.password;
+            if (editForm.department_id) updates.department_id = parseInt(editForm.department_id);
             await api.updateUser(editingUser.id, updates);
             setEditingUser(null);
-            setEditForm({ email: '', password: '', role: '' });
+            setEditForm({ email: '', password: '', role: '', department_id: '' });
             await loadUsers();
             showMessage('success', 'User updated successfully!');
         } catch (err) { showMessage('error', err.message || 'Failed to update user'); }
@@ -499,6 +500,15 @@ const UsersTab = ({ showMessage }) => {
                                     <option value="principal">Principal</option>
                                 </select>
                             </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="edit-dept">Department</label>
+                                <select id="edit-dept" value={editForm.department_id}
+                                    onChange={(e) => setEditForm({ ...editForm, department_id: e.target.value })}
+                                    className="input-field">
+                                    <option value="">No Department</option>
+                                    {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                </select>
+                            </div>
                         </div>
                         <div className="flex gap-3 mt-6">
                             <button onClick={() => setEditingUser(null)} className="btn-ghost flex-1">Cancel</button>
@@ -515,7 +525,7 @@ const UsersTab = ({ showMessage }) => {
                     <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                         <Plus size={20} className="text-lab-primary" /> Add New User
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                         <input type="email" value={newUser.email}
                             onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                             placeholder="Email address..." className="input-field" />
@@ -528,6 +538,12 @@ const UsersTab = ({ showMessage }) => {
                             <option value="assistant">Lab Assistant</option>
                             <option value="hod">HOD</option>
                             <option value="principal">Principal</option>
+                        </select>
+                        <select value={newUser.department_id}
+                            onChange={(e) => setNewUser({ ...newUser, department_id: e.target.value })}
+                            className="input-field">
+                            <option value="">No Department</option>
+                            {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                         </select>
                         <div className="flex gap-2">
                             <button onClick={handleAddUser} disabled={!newUser.email || !newUser.password}
@@ -559,9 +575,16 @@ const UsersTab = ({ showMessage }) => {
                                     <div className="p-2 bg-gray-100 rounded-full"><Users size={18} className="text-gray-600" /></div>
                                     <div>
                                         <div className="font-semibold text-gray-900">{user.email}</div>
-                                        <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium border ${roleColors[user.role] || 'bg-gray-100'}`}>
-                                            {user.role?.toUpperCase()}
-                                        </span>
+                                        <div className="flex items-center gap-2 mt-0.5">
+                                            <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium border ${roleColors[user.role] || 'bg-gray-100'}`}>
+                                                {user.role?.toUpperCase()}
+                                            </span>
+                                            {user.department_id && (
+                                                <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-md">
+                                                    {departments.find(d => d.id === user.department_id)?.name || `Dept #${user.department_id}`}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-1">

@@ -38,6 +38,7 @@ class UserRegister(BaseModel):
     password: str
     role: str = "assistant"  # Default to lab assistant
     name: Optional[str] = None
+    department_id: Optional[int] = None
 
 
 class UserResponse(BaseModel):
@@ -45,6 +46,7 @@ class UserResponse(BaseModel):
     email: str
     role: str
     name: Optional[str] = None
+    department_id: Optional[int] = None
 
     class Config:
         from_attributes = True
@@ -60,6 +62,7 @@ class UserUpdate(BaseModel):
     email: Optional[str] = None
     role: Optional[str] = None
     password: Optional[str] = None
+    department_id: Optional[int] = None
 
 
 # ====== Default Admin Creation ======
@@ -108,7 +111,8 @@ def login(data: UserLogin, db: Session = Depends(get_db)):
             "id": user.id,
             "email": user.email,
             "role": user.role,
-            "name": getattr(user, 'name', None)
+            "name": getattr(user, 'name', None),
+            "department_id": user.department_id
         }
     }
 
@@ -128,7 +132,8 @@ def check_auth(current_user: User = Depends(get_current_user_optional)):
             "user": {
                 "id": current_user.id,
                 "email": current_user.email,
-                "role": current_user.role
+                "role": current_user.role,
+                "department_id": current_user.department_id
             }
         }
     return {"authenticated": False, "user": None}
@@ -168,7 +173,8 @@ def register_user(
     user = User(
         email=data.email,
         hashed_password=get_password_hash(data.password),
-        role=data.role
+        role=data.role,
+        department_id=data.department_id
     )
     db.add(user)
     db.commit()
@@ -225,6 +231,8 @@ def update_user(
         user.role = data.role
     if data.password:
         user.hashed_password = get_password_hash(data.password)
+    if data.department_id is not None:
+        user.department_id = data.department_id
     
     db.commit()
     db.refresh(user)

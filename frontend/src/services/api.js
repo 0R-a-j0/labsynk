@@ -37,11 +37,13 @@ export const api = {
         return response.json();
     },
 
-    createUser: async (email, password, role) => {
+    createUser: async (email, password, role, department_id = null) => {
+        const body = { email, password, role };
+        if (department_id) body.department_id = parseInt(department_id);
         const response = await fetch(`${API_URL}/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-            body: JSON.stringify({ email, password, role }),
+            body: JSON.stringify(body),
         });
         if (!response.ok) {
             const error = await response.json().catch(() => ({}));
