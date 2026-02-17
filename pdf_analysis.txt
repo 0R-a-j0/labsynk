@@ -1,0 +1,80 @@
+\n======= PAGE 1 =======\nTEXT:\nComputer Hardware & Networking Lab
+SUBJECT Practical No. of period in one session: Credits
+No. of Periods per Week Full Marks: : 25
+CODE:
+L T P/S Internal (PA) : 07 01
+2018506
+- - 02 External (ESE) : 18
+Course Learning Objective:
+Platform Used (In case of Software & Hardware):
+1. Client Machines (Computers with windows / Linux and latest configuration) with Printer: Laser jet.
+2.Network Tool kit: clamping, crimping tool, network tester, line tester .
+3. Network Accessories: RJ 45, UTP cable, T c\nTABLES (2):\n['SUBJECT\nCODE:\n2018506', 'Practical', None, None, 'No. of period in one session:', None, None, 'Credits']\n[None, 'No. of Periods per Week', None, None, 'Full Marks:', ':', '25', '01']\n[None, 'L', 'T', 'P/S', 'Internal (PA)', ':', '07', None]\n[None, '-', '-', '02', 'External (ESE)', ':', '18', None]\n['CONTENTS : Practical', None, 'Hrs.', 'Marks']\n['UNIT – 01', 'Identify motherboard components', '[04]', '']\n['UNIT – 02', 'RAM identification, removal, installation.', '[03]', '']\n['UNIT – 03', 'CMOS setup.', '[03]', '']\n['UNIT – 04', 'Print a summary of your system Hardware.', '[03]', '']\n['UNIT – 05', 'Upgrading memory.', '[03]', '']\n['UNIT – 06', 'Hard drive, optical drive installation.', '[03]', '']\n['UNIT – 07', 'How to recover lost data on hard drive.', '[03]', '']\n\n======= PAGE 2 =======\nTEXT:\nc) Printed messages are distorted
+9.2 DMP
+a) Print head moves back and forth but nothing prints.
+b) Print self test works but printing from a computer application does
+not work etc.,
+UNIT – 10 Installation of operating system [03]
+UNIT – 11 Installation of Network card. [03]
+UNIT – 12 Preparing the UTP cable for cross and direct connections using crimping tool. [03]
+UNIT – 13 Installation of a switch and connecting systems to a network switch. [03]
+UNIT – 14 Installation of a modem (internal, ex\nTABLES (1):\n['', 'c) Printed messages are distorted\n9.2 DMP\na) Print head moves back and forth but nothing prints.\nb) Print self test works but printing from a computer application does\nnot work etc.,', '', '']\n['UNIT – 10', 'Installation of operating system', '[03]', '']\n['UNIT – 11', 'Installation of Network card.', '[03]', '']\n['UNIT – 12', 'Preparing the UTP cable for cross and direct connections using crimping tool.', '[03]', '']\n['UNIT – 13', 'Installation of a switch and connecting systems to a network switch.', '[03]', '']\n['UNIT – 14', 'Installation of a modem (internal, external or USB) and connecting to internet.', '[03]', '']\n['UNIT – 15', 'Using FTP for uploading and downloading files.', '[03]', '']\n['UNIT – 16', 'Installation and configuring the proxy server for internet access.', '[03]', '']\n\n======= PAGE 3 =======\nTEXT:\nObject Oriented Programming Through JAVA Lab
+SUBJECT Practical No. of period in one session: Credits
+No. of Periods per Week Full Marks : : 25
+CODE:
+L T P/S Internal (PA) : 07 02
+2018507A
+- - 04 External (ESE) : 18
+Course Objective:
+1. To learn the basic syntax and semantics of the Java language and programming environment.
+2. To understand the concepts of classes and objects
+3. To be able to implement decisions using if statements
+4. To be able to program loops with while, for and do statements\nTABLES (2):\n['SUBJECT\nCODE:\n2018507A', 'Practical', None, None, 'No. of period in one session:', None, None, 'Credits']\n[None, 'No. of Periods per Week', None, None, 'Full Marks :', ':', '25', '02']\n[None, 'L', 'T', 'P/S', 'Internal (PA)', ':', '07', None]\n[None, '-', '-', '04', 'External (ESE)', ':', '18', None]\n['CONTENTS : Practical', None, 'Hrs.', 'Marks']\n['UNIT – 01', 'Write programs using Java built-in functions using all data types.', '[04]', '']\n['UNIT – 02', 'Write programs using conditional statements and loop statements.', '[04]', '']\n['UNIT – 03', 'Write a program to read data from keyboard.', '[04]', '']\n['UNIT – 04', 'Write a program to create class and objects.', '[04]', '']\n['UNIT – 05', 'Write programs using constructors.', '[04]', '']\n['UNIT – 06', 'Write a program to illustrate usage of command line arguments.', '[03]', '']\n['UNIT – 07', 'Write programs using concept of overloading methods.', '[03]', '']\n\n======= PAGE 4 =======\nTEXT:\nOBJECT ORIENTED PROGRAMMING THROUGH C++ Lab
+SUBJECT Practical No. of period in one session: 40 Credits
+No. of Periods per Week Full Marks : : 25
+CODE:
+L T P/S Internal (PA) : 07 02
+2018507B
+- - 04 External (ESE) : 18
+Course Learning Objective
+The learning objectives of this course are:
+ To understand how C++ improves C with object-oriented features.
+ To learn how to write inline functions for efficiency and performance.
+ To learn the syntax and semantics of the C++ programming language.
+ To \nTABLES (2):\n['SUBJECT\nCODE:\n2018507B', 'Practical', None, None, 'No. of period in one session: 40', None, None, 'Credits']\n[None, 'No. of Periods per Week', None, None, 'Full Marks :', ':', '25', '02']\n[None, 'L', 'T', 'P/S', 'Internal (PA)', ':', '07', None]\n[None, '-', '-', '04', 'External (ESE)', ':', '18', None]\n['CONTENTS : Theory', None, 'Hrs.', 'Marks']\n['UNIT – 01', 'Programming exercise on executing a Basic C++ Program.', '[05]', '']\n['UNIT – 02', 'Programming Exercise on Control Statement (if-else, elseif ladder)', '[05]', '']\n['UNIT – 03', 'Programming exercise on loop Control Statement (for, while, do-while)', '[05]', '']\n['UNIT – 04', 'Programming exercise on Function.', '[05]', '']\n['UNIT – 05', 'Programming exercise on creating classes and their object.', '[05]', '']\n['UNIT – 06', 'Programming exercise to demonstrated constructor and destructor.', '[05]', '']\n['UNIT – 07', 'Programming exercise on operator overloading.', '[05]', '']\n\n======= PAGE 5 =======\nTEXT:\n.NET WITH ‘C#’ Lab
+SUBJECT Practical No. of period in one session: 50 Credits
+No. of Periods per Week Full Marks : : 25
+CODE:
+L T P/S Internal (PA) : 07 02
+2018507C
+- - 04 External (ESE) : 18
+Course Learning Objective
+On completion of the study of the subject the student should be able to comprehend the following
+Hrs /
+CONTENTS : Theory Marks
+Week
+UNIT – 01 Exercise on all basic controls in designing forms. [04]
+UNIT – 02 Design a calculator using appropriate commands. [03]
+UNIT – 03 Exercise on\nTABLES (2):\n['SUBJECT\nCODE:\n2018507C', 'Practical', None, None, 'No. of period in one session: 50', None, None, 'Credits']\n[None, 'No. of Periods per Week', None, None, 'Full Marks :', ':', '25', '02']\n[None, 'L', 'T', 'P/S', 'Internal (PA)', ':', '07', None]\n[None, '-', '-', '04', 'External (ESE)', ':', '18', None]\n['CONTENTS : Theory', None, 'Hrs /\nWeek', 'Marks']\n['UNIT – 01', 'Exercise on all basic controls in designing forms.', '[04]', '']\n['UNIT – 02', 'Design a calculator using appropriate commands.', '[03]', '']\n['UNIT – 03', 'Exercise on menus at design time and run time.', '[03]', '']\n['UNIT – 04', 'Exercise on modifying and deleting menu items.', '[03]', '']\n['UNIT – 05', 'Develop a project using arrays and control statements.', '[04]', '']\n['UNIT – 06', 'Develop a project using recursive concept.', '[04]', '']\n['UNIT – 07', 'Exercise on Line and Shape Controls.', '[03]', '']\n\n======= PAGE 6 =======\nTEXT:\nSystem Administration Lab
+SUBJECT Practical No. of period in one session: 50 Credits
+No. of Periods per Week Full Marks : : 50
+CODE:
+L T P/S Internal (PA) : 20 02
+2018508A
+- - 04 External (ESE) : 30
+Course Learning Objective:
+On completion of the study of the subject the student should be able to comprehend the following.
+The course is designed to provide complete knowledge of Windows Server OS.
+Learning Outcomes:
+After the completion of the course, the students will gain knowledge about System \nTABLES (2):\n['SUBJECT\nCODE:\n2018508A', 'Practical', None, None, 'No. of period in one session: 50', None, None, 'Credits']\n[None, 'No. of Periods per Week', None, None, 'Full Marks :', ':', '50', '02']\n[None, 'L', 'T', 'P/S', 'Internal (PA)', ':', '20', None]\n[None, '-', '-', '04', 'External (ESE)', ':', '30', None]\n['CONTENTS : Practical', None, 'Hrs.', 'Marks']\n['UNIT – 01', 'Installing Linux/Windows-2008 server.', '[05]', '']\n['UNIT – 02', 'Practice on Linux commands.', '[05]', '']\n['UNIT – 03', 'Creating and managing user accounts in LINUX/Windows-2008\nserver.', '[05]', '']\n['UNIT – 04', 'Write and execute at shell programs in Linux using numbers.', '[05]', '']\n['UNIT – 05', 'Write and execute at shell programs in Linux using strings.', '[05]', '']\n['UNIT – 06', 'Write and execute at shell programs in Linux using arrays.', '[05]', '']\n['UNIT – 07', 'Lower case to upper case, string length, concatenating strings.', '[05]', '']\n\n======= PAGE 7 =======\nTEXT:\nMultimedia Technology Lab.
+SUBJECT Practical No. of period in one session: 50 Credits
+No. of Periods per Week Full Marks : : 50
+CODE:
+L T P/S Internal (PA) : 20 02
+2018508B
+- - 04 External (ESE) : 30
+Course Objective: Creation of Web page using Integrated Development Environments.
+CONTENTS : Practical Hrs. Marks
+UNIT – 01 Create web page using structure tags to display sample message [04]
+UNIT – 02 Create a web page for displaying a paragraph using block level tags, HR tags [04]
+UNIT – 03 Create\nTABLES (2):\n['SUBJECT\nCODE:\n2018508B', 'Practical', None, None, 'No. of period in one session: 50', None, None, 'Credits']\n[None, 'No. of Periods per Week', None, None, 'Full Marks :', ':', '50', '02']\n[None, 'L', 'T', 'P/S', 'Internal (PA)', ':', '20', None]\n[None, '-', '-', '04', 'External (ESE)', ':', '30', None]\n['CONTENTS : Practical', None, 'Hrs.', 'Marks']\n['UNIT – 01', 'Create web page using structure tags to display sample message', '[04]', '']\n['UNIT – 02', 'Create a web page for displaying a paragraph using block level tags, HR tags', '[04]', '']\n['UNIT – 03', 'Create a web page for implementing different types of Lists', '[04]', '']\n['UNIT – 04', 'Create a web page to link-\na) A different web page of same site. b) A different location on the same web\npage\nc) A specific location on different web page of same site.', '[04]', '']\n['UNIT – 05', 'Insert images on web page using various attributes', '[04]', '']\n['UNIT – 06', 'Create a web page to implement Frame tags, Tables tags', '[04]', '']\n['UNIT – 07', 'Create a web page for demonstration of CSS by applying V 06*\nInternal/External/ Inline style', '[03]', '']

@@ -1,0 +1,16 @@
+fastapi
+uvicorn
+sqlalchemy
+pydantic
+python-dotenv
+python-multipart
+pypdf
+pdfplumber
+google-generativeai
+beautifulsoup4
+httpx
+requests
+jinja2
+pytest
+bcrypt
+python-jose[cryptography]
