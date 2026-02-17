@@ -1,4 +1,10 @@
-from google import genai
+try:
+    from google import genai
+    HAS_GENAI = True
+except ImportError:
+    HAS_GENAI = False
+    genai = None
+
 from core.config import settings
 import json
 
@@ -6,7 +12,7 @@ import json
 # Client initialization happens in get_gemini_client
 
 def get_gemini_client():
-    if not settings.GEMINI_API_KEY:
+    if not HAS_GENAI or not settings.GEMINI_API_KEY:
         return None
     return genai.Client(api_key=settings.GEMINI_API_KEY)
 

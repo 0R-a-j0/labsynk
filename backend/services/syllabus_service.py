@@ -1,6 +1,13 @@
 import os
-from google import genai
-from google.genai import types
+try:
+    from google import genai
+    from google.genai import types
+    HAS_GENAI = True
+except ImportError:
+    HAS_GENAI = False
+    genai = None
+    types = None
+
 from pypdf import PdfReader
 import pdfplumber
 from io import BytesIO
@@ -13,8 +20,8 @@ import re
 # ensure GEMINI_API_KEY is loaded in environment before calling this
 def get_gemini_client():
     api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        raise ValueError("GEMINI_API_KEY not found in environment variables")
+    if not HAS_GENAI or not api_key:
+        return None
     return genai.Client(api_key=api_key)
 
 def extract_text_from_pdf(file_content: bytes) -> str:
