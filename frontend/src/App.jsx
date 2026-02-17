@@ -9,6 +9,7 @@ import VirtualLabs from './pages/VirtualLabs';
 import Assistant from './pages/Assistant';
 import Syllabus from './pages/Syllabus';
 import Admin from './pages/Admin';
+import ResourceHub from './pages/ResourceHub';
 import Login from './pages/Login';
 
 // Protected route component for admin pages
@@ -52,6 +53,7 @@ function AppRoutes() {
         <Route path="inventory" element={<Inventory />} />
         <Route path="schedule" element={<SchedulePage />} />
         <Route path="labs" element={<VirtualLabs />} />
+        <Route path="resources" element={<ResourceHub />} />
         <Route path="syllabus" element={<Syllabus />} />
         <Route path="assist" element={<Assistant />} />
         <Route

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Layers, Calendar, BookOpen, FileText, Bot, Shield, LogIn, LogOut, User, Menu, X } from 'lucide-react';
+import { Layers, Calendar, BookOpen, FileText, Bot, Shield, LogIn, LogOut, User, Menu, X, LayoutGrid } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Logo from '../assets/LabSyncLogo.svg';
 
@@ -33,6 +33,7 @@ const Layout = () => {
         { to: '/schedule', icon: Calendar, text: 'Schedule' },
         { to: '/syllabus', icon: FileText, text: 'Syllabus AI' },
         { to: '/labs', icon: BookOpen, text: 'Virtual Labs' },
+        { to: '/resources', icon: LayoutGrid, text: 'Resources' },
         { to: '/assist', icon: Bot, text: 'Assistant' },
     ];
 
