@@ -10,20 +10,29 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     role = Column(String) # "assistant", "hod", "principal", "admin"
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
+
+    department = relationship("Department", foreign_keys=[department_id])
 
 class InventoryItem(Base):
     __tablename__ = "inventory"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
-    category = Column(String) # e.g. "Components", "Equipment"
+    category = Column(String, default="") # e.g. "Components", "Equipment"
     total_quantity = Column(Integer, default=0)
     available_quantity = Column(Integer, default=0)
     faulty_quantity = Column(Integer, default=0)
-    location = Column(String) # e.g. "Lab 3"
+    location = Column(String, default="") # e.g. "Lab 3"
     image_url = Column(String, nullable=True)
     description = Column(String, nullable=True)
     low_stock_threshold = Column(Integer, default=10)
+    college_id = Column(Integer, ForeignKey("colleges.id"), nullable=True)
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
+    subject = Column(String, nullable=True)
+
+    college = relationship("College", foreign_keys=[college_id])
+    department = relationship("Department", foreign_keys=[department_id])
 
 class Schedule(Base):
     __tablename__ = "schedules"
@@ -35,6 +44,12 @@ class Schedule(Base):
     course_name = Column(String)
     batch = Column(String)
     booked_by_id = Column(Integer, ForeignKey("users.id"))
+    college_id = Column(Integer, ForeignKey("colleges.id"), nullable=True)
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
+    semester = Column(Integer, nullable=True)
+    subject = Column(String, nullable=True)
+    instructor_name = Column(String, nullable=True)
+    lab_room = Column(String, nullable=True)
 
     booked_by = relationship("User")
 
@@ -72,6 +87,7 @@ class VLabSubject(Base):
     semester = Column(Integer)  # 1-8
     department_id = Column(Integer, ForeignKey("departments.id"))
     default_compiler = Column(String, nullable=True)
+    lab_manual_url = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     department = relationship("Department", back_populates="subjects")
@@ -91,4 +107,3 @@ class VLabExperiment(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     subject = relationship("VLabSubject", back_populates="experiments")
-
