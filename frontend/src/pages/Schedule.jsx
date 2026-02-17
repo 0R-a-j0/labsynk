@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
+import { Link } from 'react-router-dom';
 import { Calendar, Clock, Plus, X, BookOpen, MapPin, User, Building2, GraduationCap, Trash2 } from 'lucide-react';
 
 const SchedulePage = () => {
-    const { hasRole } = useAuth();
+    const { hasRole, user } = useAuth();
     const [schedules, setSchedules] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -142,7 +143,12 @@ const SchedulePage = () => {
                         <p className="page-subtitle text-sm">Manage lab bookings and timetables</p>
                     </div>
                 </div>
-                {hasRole('assistant') && (
+                {!user ? (
+                    <Link to="/login" className="btn-primary flex items-center gap-2 text-sm">
+                        <User size={18} />
+                        Login to Book
+                    </Link>
+                ) : hasRole('assistant') && (
                     <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-2 text-sm">
                         <Plus size={18} />
                         Book Slot
@@ -160,7 +166,19 @@ const SchedulePage = () => {
                 <div className="section-card text-center py-16">
                     <Calendar size={48} className="text-gray-300 mx-auto mb-4" />
                     <p className="text-gray-500 font-medium">No bookings yet</p>
-                    <p className="text-gray-400 text-sm mt-1">Book your first lab slot to get started</p>
+                    <p className="text-gray-400 text-sm mt-1 mb-6">Book your first lab slot to get started</p>
+
+                    {!user ? (
+                        <Link to="/login" className="btn-primary inline-flex items-center gap-2">
+                            <User size={18} />
+                            Login to Book
+                        </Link>
+                    ) : hasRole('assistant') && (
+                        <button onClick={() => setShowModal(true)} className="btn-primary inline-flex items-center gap-2">
+                            <Plus size={18} />
+                            Book Slot
+                        </button>
+                    )}
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
