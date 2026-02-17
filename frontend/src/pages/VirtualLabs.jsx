@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import { BookOpen, Filter, ExternalLink, Search, ChevronDown, Beaker, Code } from 'lucide-react';
+import { BookOpen, Filter, ExternalLink, Search, ChevronDown, Beaker, Code, FileText } from 'lucide-react';
 
 const VirtualLabs = () => {
     const [colleges, setColleges] = useState([]);
@@ -111,76 +111,101 @@ const VirtualLabs = () => {
                     <p className="text-lab-muted mt-4 text-sm">Loading experiments...</p>
                 </div>
             ) : experiments.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {experiments.map((exp, i) => (
-                        <div
-                            key={exp.id || i}
-                            className="glass-card p-5 animate-fade-in-up"
-                            style={{ opacity: 0, animationDelay: `${i * 80}ms` }}
-                        >
-                            <div className="flex items-start gap-3">
-                                <div className="bg-teal-100 text-teal-600 p-2 rounded-xl flex-shrink-0 mt-0.5">
-                                    <Beaker size={18} />
+                <div className="space-y-4">
+                    {/* Lab Manual Button */}
+                    {currentSubject?.lab_manual_url && (
+                        <div className="section-card animate-fade-in-up flex items-center justify-between" style={{ opacity: 0 }}>
+                            <div className="flex items-center gap-3">
+                                <div className="bg-blue-100 text-blue-600 p-2 rounded-xl">
+                                    <FileText size={20} />
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <h3 className="font-bold text-gray-900 mb-1">{exp.topic}</h3>
-                                    {exp.description && (
-                                        <p className="text-sm text-gray-500 mb-3 line-clamp-2">{exp.description}</p>
-                                    )}
-                                    {exp.simulation_links?.length > 0 ? (
-                                        <div className="flex flex-wrap gap-2">
-                                            {exp.simulation_links.map((link, j) => {
-                                                const isYouTube = link.source?.toLowerCase().includes('youtube');
-                                                if (link.source?.toLowerCase().includes('programiz')) return null;
-
-                                                return (
-                                                    <a
-                                                        key={j}
-                                                        href={link.url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 ${isYouTube
-                                                            ? 'bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white'
-                                                            : 'bg-lab-accent/10 text-lab-accent hover:bg-lab-accent hover:text-white'
-                                                            }`}
-                                                        title={link.description}
-                                                    >
-                                                        {isYouTube ? 'Watch Video' : link.source}
-                                                        <ExternalLink size={12} />
-                                                    </a>
-                                                );
-                                            })}
-                                            {currentSubject?.default_compiler && (
-                                                <a
-                                                    href={currentSubject.default_compiler}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 bg-lab-accent/10 text-lab-accent hover:bg-lab-accent hover:text-white"
-                                                >
-                                                    Online Compiler
-                                                    <Code size={12} />
-                                                </a>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <div className="flex flex-wrap gap-2">
-                                            {currentSubject?.default_compiler && (
-                                                <a
-                                                    href={currentSubject.default_compiler}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 bg-lab-accent/10 text-lab-accent hover:bg-lab-accent hover:text-white"
-                                                >
-                                                    Online Compiler
-                                                    <Code size={12} />
-                                                </a>
-                                            )}
-                                        </div>
-                                    )}
+                                <div>
+                                    <p className="font-semibold text-gray-800">Lab Manual</p>
+                                    <p className="text-xs text-gray-500">View the official lab manual for {currentSubject.name}</p>
                                 </div>
                             </div>
+                            <a
+                                href={`http://127.0.0.1:8000${currentSubject.lab_manual_url}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn-primary flex items-center gap-2 text-sm"
+                            >
+                                <FileText size={16} />
+                                View Manual
+                            </a>
                         </div>
-                    ))}
+                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {experiments.map((exp, i) => (
+                            <div
+                                key={exp.id || i}
+                                className="glass-card p-5 animate-fade-in-up"
+                                style={{ opacity: 0, animationDelay: `${i * 80}ms` }}
+                            >
+                                <div className="flex items-start gap-3">
+                                    <div className="bg-teal-100 text-teal-600 p-2 rounded-xl flex-shrink-0 mt-0.5">
+                                        <Beaker size={18} />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="font-bold text-gray-900 mb-1">{exp.topic}</h3>
+                                        {exp.description && (
+                                            <p className="text-sm text-gray-500 mb-3 line-clamp-2">{exp.description}</p>
+                                        )}
+                                        {exp.simulation_links?.length > 0 ? (
+                                            <div className="flex flex-wrap gap-2">
+                                                {exp.simulation_links.map((link, j) => {
+                                                    const isYouTube = link.source?.toLowerCase().includes('youtube');
+                                                    if (link.source?.toLowerCase().includes('programiz')) return null;
+
+                                                    return (
+                                                        <a
+                                                            key={j}
+                                                            href={link.url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 ${isYouTube
+                                                                ? 'bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white'
+                                                                : 'bg-lab-accent/10 text-lab-accent hover:bg-lab-accent hover:text-white'
+                                                                }`}
+                                                            title={link.description}
+                                                        >
+                                                            {isYouTube ? 'Watch Video' : link.source}
+                                                            <ExternalLink size={12} />
+                                                        </a>
+                                                    );
+                                                })}
+                                                {currentSubject?.default_compiler && (
+                                                    <a
+                                                        href={currentSubject.default_compiler}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 bg-lab-accent/10 text-lab-accent hover:bg-lab-accent hover:text-white"
+                                                    >
+                                                        Online Compiler
+                                                        <Code size={12} />
+                                                    </a>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-wrap gap-2">
+                                                {currentSubject?.default_compiler && (
+                                                    <a
+                                                        href={currentSubject.default_compiler}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 bg-lab-accent/10 text-lab-accent hover:bg-lab-accent hover:text-white"
+                                                    >
+                                                        Online Compiler
+                                                        <Code size={12} />
+                                                    </a>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             ) : filters.subject ? (
                 <div className="section-card text-center py-16">

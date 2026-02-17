@@ -323,4 +323,19 @@ export const api = {
         }
         return response.json();
     },
+
+    // ====== Lab Manual API ======
+    uploadLabManual: async (subjectId, file) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await fetch(`${API_URL}/vlabs/subjects/${subjectId}/lab-manual`, {
+            method: 'POST',
+            body: formData,
+        });
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.detail || 'Failed to upload lab manual');
+        }
+        return response.json();
+    },
 };

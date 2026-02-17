@@ -1,8 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from pydantic import BaseModel
 import json
+import os
+import uuid
 
 from database import get_db
 from models import College, Department, VLabSubject, VLabExperiment
@@ -44,6 +47,7 @@ class VLabSubjectCreate(BaseModel):
     semester: int
     department_id: int
     default_compiler: Optional[str] = None
+    lab_manual_url: Optional[str] = None
 
 class VLabSubjectResponse(BaseModel):
     id: int
@@ -52,6 +56,7 @@ class VLabSubjectResponse(BaseModel):
     semester: int
     department_id: int
     default_compiler: Optional[str]
+    lab_manual_url: Optional[str] = None
     
     class Config:
         from_attributes = True
@@ -61,6 +66,7 @@ class VLabSubjectUpdate(BaseModel):
     code: Optional[str] = None
     semester: Optional[int] = None
     default_compiler: Optional[str] = None
+    lab_manual_url: Optional[str] = None
 
 class SimulationLink(BaseModel):
     source: str
@@ -242,6 +248,8 @@ def update_subject(subject_id: int, data: VLabSubjectUpdate, db: Session = Depen
         subject.semester = data.semester
     if data.default_compiler is not None:
         subject.default_compiler = data.default_compiler
+    if data.lab_manual_url is not None:
+        subject.lab_manual_url = data.lab_manual_url
     
     db.commit()
     db.refresh(subject)
@@ -257,6 +265,47 @@ def delete_subject(subject_id: int, db: Session = Depends(get_db)):
     db.delete(subject)
     db.commit()
     return {"success": True, "message": "Subject deleted"}
+
+
+# ====== Lab Manual Upload ======
+
+LAB_MANUALS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads", "lab_manuals")
+os.makedirs(LAB_MANUALS_DIR, exist_ok=True)
+
+@router.post("/subjects/{subject_id}/lab-manual")
+async def upload_lab_manual(subject_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    """Upload a lab manual PDF for a subject"""
+    subject = db.query(VLabSubject).filter(VLabSubject.id == subject_id).first()
+    if not subject:
+        raise HTTPException(status_code=404, detail="Subject not found")
+    
+    if not file.filename.lower().endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+    
+    # Generate unique filename
+    ext = os.path.splitext(file.filename)[1]
+    filename = f"{uuid.uuid4().hex}{ext}"
+    filepath = os.path.join(LAB_MANUALS_DIR, filename)
+    
+    contents = await file.read()
+    with open(filepath, "wb") as f:
+        f.write(contents)
+    
+    # Update subject with manual URL
+    manual_url = f"/vlabs/lab-manuals/{filename}"
+    subject.lab_manual_url = manual_url
+    db.commit()
+    db.refresh(subject)
+    
+    return {"success": True, "lab_manual_url": manual_url, "filename": file.filename}
+
+@router.get("/lab-manuals/{filename}")
+async def serve_lab_manual(filename: str):
+    """Serve a lab manual PDF file"""
+    filepath = os.path.join(LAB_MANUALS_DIR, filename)
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="Lab manual not found")
+    return FileResponse(filepath, media_type="application/pdf")
 
 
 # ====== Experiment Endpoints ======

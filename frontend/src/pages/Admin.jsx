@@ -3,7 +3,7 @@ import { api } from '../services/api';
 import {
     Shield, Building2, GraduationCap, Users, BarChart3, Plus, Trash2,
     CheckCircle, AlertCircle, Beaker, BookOpen,
-    RefreshCw, X, Undo2, Clock, Edit3, TestTube2, Link as LinkIcon
+    RefreshCw, X, Undo2, Clock, Edit3, TestTube2, Link as LinkIcon, FileText, Upload
 } from 'lucide-react';
 
 const Admin = () => {
@@ -605,6 +605,8 @@ const LabsTab = ({ colleges, departments, showMessage }) => {
 
     // Experiment Form State
     const [expForm, setExpForm] = useState({ topic: '', unit: '', description: '', suggested_simulation: '', links: [{ source: 'IIT Bombay', url: '' }] });
+    const [uploadingManual, setUploadingManual] = useState(null);
+    const fileInputRef = React.useRef(null);
 
     useEffect(() => {
         if (selectedDept && selectedSemester) {
@@ -723,6 +725,17 @@ const LabsTab = ({ colleges, departments, showMessage }) => {
         } catch (err) { showMessage('error', err.message); }
     };
 
+    const handleManualUpload = async (subjectId, file) => {
+        if (!file) return;
+        setUploadingManual(subjectId);
+        try {
+            await api.uploadLabManual(subjectId, file);
+            showMessage('success', 'Lab manual uploaded successfully!');
+            loadSubjects();
+        } catch (err) { showMessage('error', err.message || 'Upload failed'); }
+        finally { setUploadingManual(null); }
+    };
+
     return (
         <div className="space-y-6 animate-fade-in">
             {/* Filters */}
@@ -824,6 +837,27 @@ const LabsTab = ({ colleges, departments, showMessage }) => {
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-1">
+                                            {/* Lab Manual Upload */}
+                                            <input
+                                                type="file"
+                                                accept=".pdf"
+                                                className="hidden"
+                                                id={`manual-upload-${subject.id}`}
+                                                onChange={(e) => { handleManualUpload(subject.id, e.target.files[0]); e.target.value = ''; }}
+                                            />
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); document.getElementById(`manual-upload-${subject.id}`).click(); }}
+                                                disabled={uploadingManual === subject.id}
+                                                className={`p-2 rounded-xl transition-colors relative ${subject.lab_manual_url ? 'text-green-500 hover:text-green-700 hover:bg-green-50' : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'}`}
+                                                title={subject.lab_manual_url ? 'Replace Lab Manual (PDF uploaded)' : 'Upload Lab Manual PDF'}
+                                            >
+                                                {uploadingManual === subject.id ? (
+                                                    <div className="w-4 h-4 border-2 border-lab-primary border-t-transparent rounded-full animate-spin" />
+                                                ) : (
+                                                    <FileText size={16} />
+                                                )}
+                                                {subject.lab_manual_url && <span className="absolute top-1 right-1 w-2 h-2 bg-green-500 rounded-full" />}
+                                            </button>
                                             <button onClick={(e) => { e.stopPropagation(); setEditingSubject(subject); setNewSubject({ name: subject.name, code: subject.code || '', semester: subject.semester }); }}
                                                 className="p-2 text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl" title="Edit Subject">
                                                 <Edit3 size={16} />
