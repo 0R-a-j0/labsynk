@@ -3,7 +3,8 @@ import { api } from '../services/api';
 import {
     Shield, Building2, GraduationCap, Users, BarChart3, Plus, Trash2,
     CheckCircle, AlertCircle, Beaker, BookOpen,
-    RefreshCw, X, Undo2, Clock, Edit3, TestTube2, Link as LinkIcon, FileText, Upload
+    RefreshCw, X, Undo2, Clock, Edit3, TestTube2, Link as LinkIcon, FileText, Upload,
+    MessageSquare, Hammer, AlertTriangle
 } from 'lucide-react';
 
 const Admin = () => {
@@ -118,7 +119,9 @@ const Admin = () => {
         { id: 'labs', label: 'Labs', icon: TestTube2 },
         { id: 'colleges', label: 'Colleges', icon: Building2 },
         { id: 'departments', label: 'Departments', icon: GraduationCap },
+
         { id: 'users', label: 'Users', icon: Users },
+        { id: 'engagement', label: 'Engagement', icon: MessageSquare },
     ];
 
     const statCards = [
@@ -393,6 +396,9 @@ const Admin = () => {
 
                 {/* Users Tab */}
                 {activeTab === 'users' && <UsersTab colleges={colleges} departments={departments} showMessage={showMessage} />}
+
+                {/* Engagement Tab */}
+                {activeTab === 'engagement' && <EngagementTab showMessage={showMessage} />}
             </div>
         </div>
     );
@@ -403,9 +409,9 @@ const UsersTab = ({ colleges, departments, showMessage }) => {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showAddForm, setShowAddForm] = useState(false);
-    const [newUser, setNewUser] = useState({ email: '', password: '', role: 'assistant', department_id: '' });
+    const [newUser, setNewUser] = useState({ email: '', password: '', role: 'assistant', department_id: '', name: '' });
     const [editingUser, setEditingUser] = useState(null);
-    const [editForm, setEditForm] = useState({ email: '', password: '', role: '', department_id: '' });
+    const [editForm, setEditForm] = useState({ email: '', password: '', role: '', department_id: '', name: '' });
 
     useEffect(() => { loadUsers(); }, []);
 
@@ -418,8 +424,8 @@ const UsersTab = ({ colleges, departments, showMessage }) => {
     const handleAddUser = async () => {
         if (!newUser.email || !newUser.password) return;
         try {
-            await api.createUser(newUser.email, newUser.password, newUser.role, newUser.department_id || null);
-            setNewUser({ email: '', password: '', role: 'assistant', department_id: '' });
+            await api.createUser(newUser.email, newUser.password, newUser.role, newUser.department_id || null, newUser.name || null);
+            setNewUser({ email: '', password: '', role: 'assistant', department_id: '', name: '' });
             setShowAddForm(false);
             await loadUsers();
             showMessage('success', 'User created successfully!');
@@ -526,6 +532,9 @@ const UsersTab = ({ colleges, departments, showMessage }) => {
                         <Plus size={20} className="text-lab-primary" /> Add New User
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                        <input type="text" value={newUser.name}
+                            onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                            placeholder="Name..." className="input-field" />
                         <input type="email" value={newUser.email}
                             onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                             placeholder="Email address..." className="input-field" />
@@ -574,7 +583,8 @@ const UsersTab = ({ colleges, departments, showMessage }) => {
                                 <div className="flex items-center gap-3">
                                     <div className="p-2 bg-gray-100 rounded-full"><Users size={18} className="text-gray-600" /></div>
                                     <div>
-                                        <div className="font-semibold text-gray-900">{user.email}</div>
+                                        <div className="font-semibold text-gray-900">{user.name || '—'}</div>
+                                        <div className="text-xs text-gray-500">{user.email}</div>
                                         <div className="flex items-center gap-2 mt-0.5">
                                             <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium border ${roleColors[user.role] || 'bg-gray-100'}`}>
                                                 {user.role?.toUpperCase()}
@@ -973,6 +983,137 @@ const LabsTab = ({ colleges, departments, showMessage }) => {
                                 </div>
                             ))}
                         </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
+
+const EngagementTab = ({ showMessage }) => {
+    const [suggestions, setSuggestions] = useState([]);
+    const [reports, setReports] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [subTab, setSubTab] = useState('suggestions');
+
+    useEffect(() => {
+        loadData();
+    }, []);
+
+    const loadData = async () => {
+        setLoading(true);
+        try {
+            const [suggestionsData, reportsData] = await Promise.all([
+                api.getSuggestions(),
+                api.getInventoryReports()
+            ]);
+            setSuggestions(suggestionsData);
+            setReports(reportsData);
+        } catch (err) {
+            console.error(err);
+            showMessage('error', 'Failed to load engagement data');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleStatusUpdate = async (type, id, newStatus) => {
+        try {
+            if (type === 'suggestion') {
+                await api.updateSuggestionStatus(id, newStatus);
+                showMessage('success', 'Suggestion status updated');
+                setSuggestions(prev => prev.map(s => s.id === id ? { ...s, status: newStatus } : s));
+            } else {
+                await api.updateReportStatus(id, newStatus);
+                showMessage('success', 'Report status updated');
+                setReports(prev => prev.map(r => r.id === id ? { ...r, status: newStatus } : r));
+            }
+        } catch (err) {
+            showMessage('error', 'Update failed');
+        }
+    };
+
+    if (loading) return <div className="text-center py-10">Loading...</div>;
+
+    return (
+        <div className="space-y-6">
+            <div className="flex gap-4 border-b border-gray-200">
+                <button
+                    onClick={() => setSubTab('suggestions')}
+                    className={`pb-2 px-1 text-sm font-medium transition-colors ${subTab === 'suggestions' ? 'text-lab-primary border-b-2 border-lab-primary' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                    Resource Suggestions ({suggestions.filter(s => s.status === 'Pending').length})
+                </button>
+                <button
+                    onClick={() => setSubTab('reports')}
+                    className={`pb-2 px-1 text-sm font-medium transition-colors ${subTab === 'reports' ? 'text-lab-primary border-b-2 border-lab-primary' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                    Faulty Equipment ({reports.filter(r => r.status === 'Open').length})
+                </button>
+            </div>
+
+            {subTab === 'suggestions' && (
+                <div className="space-y-4">
+                    {suggestions.length === 0 ? <p className="text-gray-400 text-center py-8">No suggestions yet.</p> : (
+                        suggestions.map(s => (
+                            <div key={s.id} className="section-card flex flex-col sm:flex-row gap-4 justify-between items-start">
+                                <div>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <h4 className="font-bold text-gray-900">{s.tool_name}</h4>
+                                        <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline text-xs flex items-center gap-1">
+                                            <LinkIcon size={12} /> Link
+                                        </a>
+                                    </div>
+                                    <p className="text-sm text-gray-600 mb-2">{s.description}</p>
+                                    <div className="text-xs text-gray-400">Suggested by User #{s.user_id} on {new Date(s.created_at).toLocaleDateString()}</div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className={`px-2 py-1 text-xs rounded-full font-semibold
+                                        ${s.status === 'Approved' ? 'bg-green-100 text-green-700' :
+                                            s.status === 'Rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                        {s.status}
+                                    </span>
+                                    {s.status === 'Pending' && (
+                                        <>
+                                            <button onClick={() => handleStatusUpdate('suggestion', s.id, 'Approved')} className="p-1.5 text-green-600 hover:bg-green-50 rounded"><CheckCircle size={18} /></button>
+                                            <button onClick={() => handleStatusUpdate('suggestion', s.id, 'Rejected')} className="p-1.5 text-red-600 hover:bg-red-50 rounded"><X size={18} /></button>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            )}
+
+            {subTab === 'reports' && (
+                <div className="space-y-4">
+                    {reports.length === 0 ? <p className="text-gray-400 text-center py-8">No reports yet.</p> : (
+                        reports.map(r => (
+                            <div key={r.id} className="section-card flex flex-col sm:flex-row gap-4 justify-between items-start">
+                                <div>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <h4 className="font-bold text-gray-900">Item #{r.inventory_item_id}</h4>
+                                        <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Faulty</span>
+                                    </div>
+                                    <p className="text-sm text-gray-600 mb-2">{r.issue_description}</p>
+                                    <div className="text-xs text-gray-400">Reported by User #{r.user_id} on {new Date(r.created_at).toLocaleDateString()}</div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className={`px-2 py-1 text-xs rounded-full font-semibold
+                                        ${r.status === 'Resolved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                        {r.status}
+                                    </span>
+                                    {r.status === 'Open' && (
+                                        <button onClick={() => handleStatusUpdate('report', r.id, 'Resolved')}
+                                            className="btn-primary text-xs flex items-center gap-1">
+                                            <Hammer size={12} /> Mark Resolved
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        ))
                     )}
                 </div>
             )}

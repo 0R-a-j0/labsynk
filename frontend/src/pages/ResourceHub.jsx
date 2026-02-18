@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { api } from '../services/api';
 import {
     Cpu, CircuitBoard, Code2, Wifi, Radio,
     Globe, Database, Shield, FileSearch, Send,
@@ -331,7 +332,27 @@ const CategorySection = ({ category }) => {
 
 const ResourceHub = () => {
     const [activeHub, setActiveHub] = useState('iot');
+    const [showSuggestModal, setShowSuggestModal] = useState(false);
+    const [suggestionForm, setSuggestionForm] = useState({ tool_name: '', description: '', url: '' });
+    const [submitting, setSubmitting] = useState(false);
     const activeSection = hubSections.find((s) => s.id === activeHub);
+
+    const handleSuggestSubmit = async (e) => {
+        e.preventDefault();
+        if (!suggestionForm.tool_name || !suggestionForm.description) return;
+        setSubmitting(true);
+        try {
+            await api.suggestResource(suggestionForm);
+            alert('Suggestion submitted successfully! Thank you for your contribution.');
+            setShowSuggestModal(false);
+            setSuggestionForm({ tool_name: '', description: '', url: '' });
+        } catch (err) {
+            console.error(err);
+            alert('Failed to submit suggestion. Please try again.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
 
     return (
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 animate-fade-in">
@@ -400,12 +421,64 @@ const ResourceHub = () => {
 
             {/* â”€â”€ Footer CTA â”€â”€ */}
             <div className="mt-10 text-center">
-                <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-lab-primary/5 text-lab-primary text-sm font-medium">
+                <button
+                    onClick={() => setShowSuggestModal(true)}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-lab-primary/5 text-lab-primary text-sm font-medium hover:bg-lab-primary/10 transition-colors"
+                >
                     <Lightbulb size={16} />
                     Know a great tool? Suggest it to your lab instructor!
                     <ChevronRight size={14} />
-                </div>
+                </button>
             </div>
+
+            {/* Suggestion Modal */}
+            {showSuggestModal && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowSuggestModal(false)} />
+                    <div className="relative glass rounded-3xl shadow-glass-lg w-full max-w-lg p-8 animate-scale-in">
+                        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                            <Lightbulb size={20} className="text-lab-primary" /> Suggest a Tool
+                        </h3>
+                        <form onSubmit={handleSuggestSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1.5">Tool Name *</label>
+                                <input
+                                    type="text" required
+                                    value={suggestionForm.tool_name}
+                                    onChange={e => setSuggestionForm({ ...suggestionForm, tool_name: e.target.value })}
+                                    className="input-field" placeholder="e.g. Awesome Simulator"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1.5">URL *</label>
+                                <input
+                                    type="url" required
+                                    value={suggestionForm.url}
+                                    onChange={e => setSuggestionForm({ ...suggestionForm, url: e.target.value })}
+                                    className="input-field" placeholder="https://..."
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1.5">Description *</label>
+                                <textarea
+                                    required rows="3"
+                                    value={suggestionForm.description}
+                                    onChange={e => setSuggestionForm({ ...suggestionForm, description: e.target.value })}
+                                    className="input-field" placeholder="Why is this tool useful?..."
+                                />
+                            </div>
+                            <div className="flex gap-3 mt-6">
+                                <button type="button" onClick={() => setShowSuggestModal(false)} className="btn-ghost flex-1">
+                                    Cancel
+                                </button>
+                                <button type="submit" disabled={submitting} className="btn-primary flex-1">
+                                    {submitting ? 'Submitting...' : 'Submit Suggestion'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </section>
     );
 };

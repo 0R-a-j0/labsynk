@@ -420,57 +420,76 @@ def delete_experiment(experiment_id: int, db: Session = Depends(get_db)):
 def save_to_vlabs(data: SaveToVLabsRequest, db: Session = Depends(get_db)):
     """Save parsed syllabus results to VLabs storage"""
     
+    print(f"Received save request for College: {data.college_id}, Dept: {data.department_id}, Sem: {data.semester}")
+    print(f"Subjects payload: {len(data.subjects)} subjects")
+
     # Verify department and college
     department = db.query(Department).filter(Department.id == data.department_id).first()
     if not department:
+        print(f"Error: Department {data.department_id} not found")
         raise HTTPException(status_code=404, detail="Department not found")
     
     if department.college_id != data.college_id:
+        print(f"Error: Department {data.department_id} not in College {data.college_id}")
         raise HTTPException(status_code=400, detail="Department does not belong to the specified college")
     
     saved_subjects = []
     saved_experiments = 0
     
-    for subj_data in data.subjects:
-        # Create or find subject
-        subject = db.query(VLabSubject).filter(
-            VLabSubject.name == subj_data.get("subject"),
-            VLabSubject.department_id == data.department_id,
-            VLabSubject.semester == data.semester
-        ).first()
-        
-        if not subject:
-            subject = VLabSubject(
-                name=subj_data.get("subject", "Unknown"),
-                code=subj_data.get("subject_code", ""),
-                semester=data.semester,
-                department_id=data.department_id
-            )
+    try:
+        for subj_data in data.subjects:
+            print(f"Processing subject: {subj_data.get('subject')}")
+            # Create or find subject
+            subject = db.query(VLabSubject).filter(
+                VLabSubject.name == subj_data.get("subject"),
+                VLabSubject.department_id == data.department_id,
+                VLabSubject.semester == data.semester
+            ).first()
+            
+            if not subject:
+                print(f"Creating new subject: {subj_data.get('subject')}")
+                subject = VLabSubject(
+                    name=subj_data.get("subject", "Unknown"),
+                    code=subj_data.get("subject_code", ""),
+                    semester=data.semester,
+                    department_id=data.department_id
+                )
             db.add(subject)
             db.commit()
             db.refresh(subject)
         
-        saved_subjects.append(subject.name)
+            saved_subjects.append(subject.name)
         
-        # Add experiments
-        for exp_data in subj_data.get("experiments", []):
-            # Get simulation links
-            links = syllabus_service.get_simulation_links(
-                exp_data.get("suggested_simulation", exp_data.get("topic", ""))
-            )
+            # Add experiments
+            experiments_list = subj_data.get("experiments", [])
+            print(f"Adding {len(experiments_list)} experiments for {subject.name}")
             
-            experiment = VLabExperiment(
-                subject_id=subject.id,
-                unit=exp_data.get("unit"),
-                topic=exp_data.get("topic", ""),
-                description=exp_data.get("description", ""),
-                suggested_simulation=exp_data.get("suggested_simulation", ""),
-                simulation_links=json.dumps(links)
-            )
-            db.add(experiment)
-            saved_experiments += 1
-    
-    db.commit()
+            for exp_data in experiments_list:
+                # Get simulation links
+                links = syllabus_service.get_simulation_links(
+                    exp_data.get("suggested_simulation", exp_data.get("topic", ""))
+                )
+                
+                experiment = VLabExperiment(
+                    subject_id=subject.id,
+                    unit=exp_data.get("unit"),
+                    topic=exp_data.get("topic", ""),
+                    description=exp_data.get("description", ""),
+                    suggested_simulation=exp_data.get("suggested_simulation", ""),
+                    simulation_links=json.dumps(links)
+                )
+                db.add(experiment)
+                saved_experiments += 1
+                
+        db.commit()
+        print("Save successful")
+        
+    except Exception as e:
+        db.rollback()
+        print(f"Error saving to VLabs: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     
     return {
         "success": True,

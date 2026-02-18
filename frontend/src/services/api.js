@@ -1,4 +1,4 @@
-const API_URL = 'http://127.0.0.1:8000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
 // Helper to get auth header
 const getAuthHeader = () => {
@@ -37,9 +37,18 @@ export const api = {
         return response.json();
     },
 
-    createUser: async (email, password, role, department_id = null) => {
+    getDirectory: async () => {
+        const response = await fetch(`${API_URL}/auth/directory`, {
+            headers: getAuthHeader(),
+        });
+        if (!response.ok) throw new Error('Failed to fetch directory');
+        return response.json();
+    },
+
+    createUser: async (email, password, role, department_id = null, name = null) => {
         const body = { email, password, role };
         if (department_id) body.department_id = parseInt(department_id);
+        if (name) body.name = name;
         const response = await fetch(`${API_URL}/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
@@ -129,6 +138,12 @@ export const api = {
             const errorData = await response.json();
             throw new Error(errorData.detail || 'Failed to create schedule');
         }
+        return response.json();
+    },
+
+    getLabRooms: async () => {
+        const response = await fetch(`${API_URL}/schedule/rooms`);
+        if (!response.ok) throw new Error('Failed to fetch lab rooms');
         return response.json();
     },
 
@@ -338,6 +353,68 @@ export const api = {
             const error = await response.json().catch(() => ({}));
             throw new Error(error.detail || 'Failed to upload lab manual');
         }
+        return response.json();
+    },
+
+    // ====== Student Engagement API ======
+    suggestResource: async (data) => {
+        const response = await fetch(`${API_URL}/engagement/resources/suggest`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+            body: JSON.stringify(data),
+        });
+        if (!response.ok) throw new Error('Failed to submit suggestion');
+        return response.json();
+    },
+
+    getSuggestions: async () => {
+        const response = await fetch(`${API_URL}/engagement/resources/all`, {
+            headers: getAuthHeader(),
+        });
+        if (!response.ok) throw new Error('Failed to fetch suggestions');
+        return response.json();
+    },
+
+    updateSuggestionStatus: async (id, status) => {
+        const response = await fetch(`${API_URL}/engagement/resources/${id}/status?status=${status}`, {
+            method: 'PUT',
+            headers: getAuthHeader(),
+        });
+        if (!response.ok) throw new Error('Failed to update status');
+        return response.json();
+    },
+
+    reportInventoryIssue: async (data, token = null) => {
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        else {
+            const auth = getAuthHeader();
+            if (auth.Authorization) headers['Authorization'] = auth.Authorization;
+        }
+
+        const response = await fetch(`${API_URL}/engagement/inventory/report`, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(data),
+        });
+        if (!response.ok) throw new Error('Failed to report issue');
+        return response.json();
+    },
+
+    getInventoryReports: async () => {
+        const response = await fetch(`${API_URL}/engagement/inventory/reports`, {
+            headers: getAuthHeader(),
+        });
+        if (!response.ok) throw new Error('Failed to fetch reports');
+        return response.json();
+    },
+
+    updateReportStatus: async (id, status) => {
+        const response = await fetch(`${API_URL}/engagement/inventory/reports/${id}/status?status=${status}`, {
+            method: 'PUT',
+            headers: getAuthHeader(),
+        });
+        if (!response.ok) throw new Error('Failed to update status');
         return response.json();
     },
 };

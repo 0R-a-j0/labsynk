@@ -21,6 +21,14 @@ def read_schedules(skip: int = 0, limit: int = 100, db: Session = Depends(get_db
 
     return db.query(models.Schedule).offset(skip).limit(limit).all()
 
+@router.get("/rooms", response_model=List[str])
+def get_lab_rooms(db: Session = Depends(get_db)):
+    """Get distinct lab rooms that have been used/scheduled"""
+    # Fetch distinct lab_room values where it's not null
+    rooms = db.query(models.Schedule.lab_room).distinct().filter(models.Schedule.lab_room != None).all()
+    # Flatten the list of tuples [('Room 1',), ('Room 2',)] -> ['Room 1', 'Room 2']
+    return [r[0] for r in rooms if r[0]]
+
 @router.post("/", response_model=schemas.Schedule)
 def create_schedule(schedule: schemas.ScheduleCreate, db: Session = Depends(get_db)):
     # Conflict Detection Logic

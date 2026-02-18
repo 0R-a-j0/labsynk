@@ -76,7 +76,8 @@ def create_default_admin(db: Session):
         admin = User(
             email=admin_email,
             hashed_password=get_password_hash("LABSYNkT3ST!"),
-            role="principal"  # Highest access
+            role="principal",  # Highest access
+            name="Principal"
         )
         db.add(admin)
         db.commit()
@@ -174,6 +175,7 @@ def register_user(
         email=data.email,
         hashed_password=get_password_hash(data.password),
         role=data.role,
+        name=data.name or "test0",
         department_id=data.department_id
     )
     db.add(user)
@@ -190,6 +192,15 @@ def list_users(
 ):
     """List all users (HOD/Principal only)"""
     return db.query(User).order_by(User.email).all()
+
+
+@router.get("/directory", response_model=List[UserResponse])
+def get_user_directory(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """List all users (Available to all authenticated users for dropdowns)"""
+    return db.query(User).order_by(User.role, User.name, User.email).all()
 
 
 @router.delete("/users/{user_id}")
@@ -233,6 +244,8 @@ def update_user(
         user.hashed_password = get_password_hash(data.password)
     if data.department_id is not None:
         user.department_id = data.department_id
+    if data.name:
+        user.name = data.name
     
     db.commit()
     db.refresh(user)

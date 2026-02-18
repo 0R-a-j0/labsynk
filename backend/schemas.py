@@ -44,6 +44,7 @@ class Inventory(InventoryBase):
 class UserBase(BaseModel):
     email: str
     role: str
+    name: Optional[str] = "test0"
 
 class UserCreate(UserBase):
     password: str
@@ -52,6 +53,7 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     email: Optional[str] = None
     role: Optional[str] = None
+    name: Optional[str] = None
     password: Optional[str] = None
     department_id: Optional[int] = None
 
@@ -82,6 +84,40 @@ class ScheduleCreate(ScheduleBase):
 
 class Schedule(ScheduleBase):
     id: int
+
+    class Config:
+        from_attributes = True
+
+# Engagement Schemas
+class ResourceSuggestionBase(BaseModel):
+    tool_name: str
+    description: str
+    url: str
+
+class ResourceSuggestionCreate(ResourceSuggestionBase):
+    pass
+
+class ResourceSuggestion(ResourceSuggestionBase):
+    id: int
+    user_id: int
+    status: str
+    created_at: datetime
+    class Config:
+        from_attributes = True
+
+class InventoryReportBase(BaseModel):
+    inventory_item_id: int
+    issue_description: str
+    reporter_name: Optional[str] = None # For unauthenticated users
+
+class InventoryReportCreate(InventoryReportBase):
+    pass
+
+class InventoryReport(InventoryReportBase):
+    id: int
+    user_id: Optional[int] = None
+    status: str
+    created_at: datetime
 
     class Config:
         from_attributes = True

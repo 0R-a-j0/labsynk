@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import {
     Layers, Search, Plus, X, Edit2, AlertTriangle, Package, Hash, Tag,
-    MapPin, ChevronDown, Building2, BookOpen, Filter, Trash2
+    MapPin, ChevronDown, Building2, BookOpen, Filter, Trash2, Wrench
 } from 'lucide-react';
 
 const Inventory = () => {
@@ -14,6 +14,11 @@ const Inventory = () => {
     const [showModal, setShowModal] = useState(false);
     const [editItem, setEditItem] = useState(null);
     const [showFilters, setShowFilters] = useState(false);
+
+    // Reporting state
+    const [showReportModal, setShowReportModal] = useState(null); // Item object or { id: null, name: 'General Issue' }
+    const [reportForm, setReportForm] = useState({ issue_description: '', reported_item_name: '', category: '', location: '', reporter_name: '' });
+    const [reporting, setReporting] = useState(false);
 
     // Classification data
     const [colleges, setColleges] = useState([]);
@@ -57,18 +62,40 @@ const Inventory = () => {
     const fetchItems = useCallback(async (collegeId, deptId) => {
         setLoading(true);
         try {
-            let url = `/inventory/?skip=0&limit=200`;
-            if (collegeId) url += `&college_id=${collegeId}`;
-            if (deptId) url += `&department_id=${deptId}`;
-            const response = await fetch(`http://127.0.0.1:8000${url}`);
-            if (!response.ok) throw new Error('Failed to fetch');
-            const data = await response.json();
+            // Use local filtering if API filtering not available or complex
+            // For now, simpler to fetch all and filter client side if needed, or use the API params
+            // But let's stick to the URL structure but use the imported api object's base URL logic if possible
+            // Actually, let's just use api.getInventory if params are empty, or construct URL using relative path if proxy is set, or full path matching api.js
+
+            // To fix "Failed to fetch", we should ensure we are hitting the right port. 
+            // The best way is to rely on api.js logic.
+
+            // Let's implement a direct fetch using the variable from api.js context if we could, but we can't easily.
+            // So we will just correct the URL to point to localhost:8000 which is standard, 
+            // but wrapped in a try/catch that falls back to api.getInventory() which uses the constant.
+
+            // Actually, api.js exports API_URL? No, it's internal.
+            // Let's just use the fallback logic primarily.
+
+            let data;
+            if (collegeId || deptId) {
+                let url = `http://127.0.0.1:8000/inventory/?skip=0&limit=200`;
+                if (collegeId) url += `&college_id=${collegeId}`;
+                if (deptId) url += `&department_id=${deptId}`;
+
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Failed to fetch');
+                data = await response.json();
+            } else {
+                data = await api.getInventory();
+            }
             setItems(data);
         } catch (err) {
             console.error(err);
-            // fallback
-            const data = await api.getInventory();
-            setItems(data);
+            try {
+                const data = await api.getInventory();
+                setItems(data);
+            } catch (e) { console.error("Double fail", e); }
         }
         finally { setLoading(false); }
     }, []);
@@ -142,9 +169,10 @@ const Inventory = () => {
             }
             fetchItems(filterCollege || undefined, filterDept || undefined);
             handleCloseModal();
+            handleCloseModal();
         } catch (err) {
-            console.error('Submit error:', err);
-            alert('Failed to save item. Check console for details.');
+            console.error('Submit error details:', err.response?.data || err.message);
+            alert(`Failed to save item: ${JSON.stringify(err.response?.data?.detail || err.message)}`);
         }
     };
 
@@ -198,8 +226,41 @@ const Inventory = () => {
         return { label: 'Available', style: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
     };
 
+    const handleReportSubmit = async (e) => {
+        e.preventDefault();
+        if (!reportForm.issue_description) return;
+
+        // If general report, require item name
+        if (!showReportModal.id && !reportForm.reported_item_name) {
+            alert('Please specify the item name');
+            return;
+        }
+
+        setReporting(true);
+        try {
+            const payload = {
+                inventory_item_id: showReportModal.id,
+                issue_description: reportForm.issue_description,
+                reported_item_name: showReportModal.id ? showReportModal.name : reportForm.reported_item_name,
+                category: reportForm.category,
+                location: reportForm.location,
+                reporter_name: reportForm.reporter_name // Included for unauthenticated users
+            };
+
+            await api.reportInventoryIssue(payload);
+            alert('Issue reported successfully!');
+            setShowReportModal(null);
+            setReportForm({ issue_description: '', reported_item_name: '', category: '', location: '', reporter_name: '' });
+        } catch (err) {
+            console.error(err);
+            alert('Failed to report issue');
+        } finally {
+            setReporting(false);
+        }
+    };
+
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in pb-24">
             {/* Header */}
             <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
@@ -391,6 +452,13 @@ const Inventory = () => {
                                                 </div>
                                             </>
                                         )}
+                                        <button
+                                            onClick={() => setShowReportModal(item)}
+                                            className="ml-auto p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                                            title="Report Issue"
+                                        >
+                                            <AlertTriangle size={18} />
+                                        </button>
                                     </div>
                                     <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${status.style}`}>
                                         {status.label}
@@ -404,9 +472,9 @@ const Inventory = () => {
 
             {/* Add / Edit Modal */}
             {showModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+                <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
                     <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={handleCloseModal} />
-                    <div className="relative glass rounded-3xl shadow-glass-lg w-full max-w-lg p-8 animate-scale-in max-h-[90vh] overflow-y-auto">
+                    <div className="relative glass rounded-3xl shadow-glass-lg w-full max-w-4xl p-8 animate-scale-in max-h-[90vh] overflow-y-auto">
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-xl font-bold text-gray-900">
                                 {editItem ? 'Edit Item' : 'Add New Item'}
@@ -459,8 +527,8 @@ const Inventory = () => {
                                 </div>
                             </div>
 
-                            {/* Quantities */}
-                            <div className="grid grid-cols-3 gap-4">
+                            {/* Quantities & Threshold */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="item-total">Total Qty</label>
                                     <input
@@ -488,21 +556,21 @@ const Inventory = () => {
                                         className="input-field" min="0"
                                     />
                                 </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="item-threshold">
+                                        Low Stock
+                                    </label>
+                                    <input
+                                        id="item-threshold"
+                                        type="number" value={formData.low_stock_threshold}
+                                        onChange={(e) => setFormData({ ...formData, low_stock_threshold: parseInt(e.target.value) || 10 })}
+                                        className="input-field" min="0"
+                                        placeholder="10"
+                                    />
+                                </div>
                             </div>
 
-                            {/* Low Stock Threshold */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="item-threshold">
-                                    Low Stock Threshold
-                                </label>
-                                <input
-                                    id="item-threshold"
-                                    type="number" value={formData.low_stock_threshold}
-                                    onChange={(e) => setFormData({ ...formData, low_stock_threshold: parseInt(e.target.value) || 10 })}
-                                    className="input-field" min="0"
-                                    placeholder="10"
-                                />
-                            </div>
+
 
                             {/* Classification Section */}
                             <div className="pt-3 border-t border-gray-100">
@@ -576,6 +644,118 @@ const Inventory = () => {
                     </div>
                 </div>
             )}
+            {/* Report Issue Modal */}
+            {showReportModal && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowReportModal(null)} />
+                    <div className="relative glass rounded-3xl shadow-glass-lg w-full max-w-md p-8 animate-scale-in">
+                        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                            <Wrench size={20} className="text-orange-500" />
+                            {showReportModal.id ? 'Report Faulty Equipment' : 'Report Missing/General Issue'}
+                        </h3>
+
+                        {showReportModal.id ? (
+                            <div className="mb-4">
+                                <p className="text-sm text-gray-600 mb-2">
+                                    Reporting issue for: <strong>{showReportModal.name}</strong> (ID: {showReportModal.id})
+                                </p>
+                                {!hasRole('student') && !hasRole('assistant') && !hasRole('admin') && !hasRole('principal') && !hasRole('hod') && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Your Name *</label>
+                                        <input
+                                            type="text" required
+                                            value={reportForm.reporter_name}
+                                            onChange={e => setReportForm({ ...reportForm, reporter_name: e.target.value })}
+                                            className="input-field"
+                                            placeholder="Enter your name"
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="space-y-4 mb-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Your Name {(!hasRole('student') && !hasRole('assistant')) ? '*' : '(Optional)'}</label>
+                                    <input
+                                        type="text"
+                                        required={!hasRole('student') && !hasRole('assistant')}
+                                        value={reportForm.reporter_name}
+                                        onChange={e => setReportForm({ ...reportForm, reporter_name: e.target.value })}
+                                        className="input-field"
+                                        placeholder="Enter your name"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Item Name / Component *</label>
+                                    <input
+                                        type="text" required
+                                        value={reportForm.reported_item_name}
+                                        onChange={e => setReportForm({ ...reportForm, reported_item_name: e.target.value })}
+                                        className="input-field"
+                                        placeholder="e.g. Soldering Iron Station 3"
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        <form onSubmit={handleReportSubmit} className="space-y-4">
+                            {!showReportModal.id && (
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Category</label>
+                                        <input
+                                            type="text"
+                                            value={reportForm.category || ''}
+                                            onChange={e => setReportForm({ ...reportForm, category: e.target.value })}
+                                            className="input-field"
+                                            placeholder="e.g. Electronics"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Location</label>
+                                        <input
+                                            type="text"
+                                            value={reportForm.location || ''}
+                                            onChange={e => setReportForm({ ...reportForm, location: e.target.value })}
+                                            className="input-field"
+                                            placeholder="e.g. Lab 3"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1.5">Issue Description *</label>
+                                <textarea
+                                    required rows="4"
+                                    value={reportForm.issue_description}
+                                    onChange={e => setReportForm({ ...reportForm, issue_description: e.target.value })}
+                                    className="input-field" placeholder={showReportModal.id ? "Describe the problem..." : "Describe what is missing or broken..."}
+                                />
+                            </div>
+                            <div className="flex gap-3 mt-6">
+                                <button type="button" onClick={() => setShowReportModal(null)} className="btn-ghost flex-1">
+                                    Cancel
+                                </button>
+                                <button type="submit" disabled={reporting} className="btn-primary flex-1 bg-orange-600 hover:bg-orange-700 text-white border-none">
+                                    {reporting ? 'Reporting...' : 'Submit Report'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* General Report Banner */}
+            <div className="mt-10 text-center">
+                <button
+                    onClick={() => setShowReportModal({ id: null, name: 'General Issue' })}
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-orange-50 text-orange-600 border border-orange-100 text-sm font-medium hover:bg-orange-100 hover:border-orange-200 transition-all shadow-sm hover:shadow"
+                >
+                    <AlertTriangle size={18} />
+                    Spot something broken or missing? Report it to the lab administrator!
+                </button>
+            </div>
         </div>
     );
 };

@@ -25,7 +25,16 @@ origins = [
     "http://127.0.0.1:5175",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "https://labsynk.vercel.app",
+    "https://labsynk-frontend.netlify.app", # Explicit Netlify App URL
 ]
+
+# Add production frontend URL from env with robust handling
+frontend_url = os.getenv("FRONTEND_URL")
+if frontend_url:
+    # Strip trailing slash if present to match browser origin
+    frontend_url = frontend_url.rstrip("/")
+    origins.append(frontend_url)
 
 app.add_middleware(
     CORSMiddleware,
@@ -42,6 +51,8 @@ app.include_router(ai.router)
 app.include_router(syllabus.router)
 app.include_router(vlabs.router)
 app.include_router(auth.router)
+from routers import student_engagement
+app.include_router(student_engagement.router)
 
 
 # ====== Startup Event - Create Default Admin ======

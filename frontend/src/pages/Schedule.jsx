@@ -25,7 +25,61 @@ const SchedulePage = () => {
     const [departments, setDepartments] = useState([]);
     const [subjects, setSubjects] = useState([]);
 
-    useEffect(() => { fetchSchedules(); loadColleges(); }, []);
+    const [columns, setColumns] = useState([]); // unused but keeping if needed
+    const [instructors, setInstructors] = useState([]);
+
+    // Track which dropdowns are in "Other" mode
+    const [showOther, setShowOther] = useState({
+        course: false, batch: false, room: false, instructor: false
+    });
+
+    // Dropdown Options
+    const LAB_NAMES = ['Network Lab', 'Database Lab', 'OS Lab', 'Algorithms Lab', 'Physics Lab', 'Chemistry Lab', 'Electronics Lab'];
+    const BATCHES = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'D1', 'D2'];
+
+    // Lab Rooms state
+    const [labRooms, setLabRooms] = useState(['Room 101', 'Room 102', 'Note Lab']); // Defaults until fetched
+
+    useEffect(() => {
+        const fetchBio = async () => {
+            try {
+                fetchSchedules();
+                loadInstructors();
+
+                // Fetch colleges
+                try {
+                    setColleges(await api.getColleges());
+                } catch (e) { console.error("Failed to load colleges", e); }
+
+                // Fetch existing lab rooms
+                try {
+                    const rooms = await api.getLabRooms();
+                    if (rooms && rooms.length > 0) {
+                        setLabRooms(rooms);
+                    } else {
+                        // Fallback defaults if API returns empty
+                        setLabRooms(['Room 101', 'Room 102', 'Room 201', 'Note Lab', 'Auto Lab', 'Seminar Hall']);
+                    }
+                } catch (e) {
+                    console.error("Failed to load lab rooms", e);
+                    // Fallback to defaults if fetch fails
+                    setLabRooms(['Room 101', 'Room 102', 'Room 201', 'Note Lab', 'Auto Lab', 'Seminar Hall']);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
+        fetchBio();
+    }, []);
+
+    const loadInstructors = async () => {
+        try {
+            const users = await api.getDirectory();
+            // Filter only assistants as per requirement
+            const inst = users.filter(u => u.role === 'assistant');
+            setInstructors(inst);
+        } catch (err) { console.error('Failed to load instructors:', err); }
+    };
 
     const fetchSchedules = async () => {
         try { const data = await api.getSchedules(); setSchedules(data); }
@@ -148,7 +202,7 @@ const SchedulePage = () => {
                         <User size={18} />
                         Login to Book
                     </Link>
-                ) : hasRole('assistant') && (
+                ) : (
                     <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-2 text-sm">
                         <Plus size={18} />
                         Book Slot
@@ -173,7 +227,7 @@ const SchedulePage = () => {
                             <User size={18} />
                             Login to Book
                         </Link>
-                    ) : hasRole('assistant') && (
+                    ) : (
                         <button onClick={() => setShowModal(true)} className="btn-primary inline-flex items-center gap-2">
                             <Plus size={18} />
                             Book Slot
@@ -243,9 +297,9 @@ const SchedulePage = () => {
 
             {/* Booking Modal */}
             {showModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+                <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
                     <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowModal(false)} />
-                    <div className="relative glass rounded-3xl shadow-glass-lg w-full max-w-lg p-8 animate-scale-in max-h-[90vh] overflow-y-auto">
+                    <div className="relative glass rounded-3xl shadow-glass-lg w-full max-w-4xl p-8 animate-scale-in max-h-[90vh] overflow-y-auto">
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-xl font-bold text-gray-900">Book Lab Slot</h2>
                             <button onClick={() => setShowModal(false)} className="p-2 hover:bg-gray-100 rounded-xl transition-colors" aria-label="Close modal">
@@ -263,7 +317,7 @@ const SchedulePage = () => {
                                 <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
                                     <Building2 size={14} /> Classification
                                 </h3>
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                     <select value={formData.college_id} onChange={e => handleCollegeChange(e.target.value)} className={selectClass}>
                                         <option value="">Select College</option>
                                         {colleges.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -276,7 +330,7 @@ const SchedulePage = () => {
                                         <option value="">Select Semester</option>
                                         {[1, 2, 3, 4, 5, 6, 7, 8].map(s => <option key={s} value={s}>Semester {s}</option>)}
                                     </select>
-                                    <select value={formData.subject} onChange={e => setFormData(prev => ({ ...prev, subject: e.target.value }))} className={selectClass} disabled={!formData.semester}>
+                                    <select value={formData.subject} onChange={e => setFormData(prev => ({ ...prev, subject: e.target.value, course_name: e.target.value }))} className={selectClass} disabled={!formData.semester}>
                                         <option value="">Select Subject</option>
                                         {subjects.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
                                         <option value="__other">Other...</option>
@@ -284,34 +338,84 @@ const SchedulePage = () => {
                                 </div>
                                 {formData.subject === '__other' && (
                                     <input type="text" placeholder="Enter subject name..."
-                                        onChange={e => setFormData(prev => ({ ...prev, subject: e.target.value || '__other' }))}
+                                        onChange={e => setFormData(prev => ({ ...prev, subject: e.target.value || '__other', course_name: e.target.value }))}
                                         className="input-field" />
                                 )}
                             </div>
 
-                            {/* Course & Batch */}
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="sched-course">Course / Lab Name *</label>
-                                    <input id="sched-course" type="text" value={formData.course_name}
-                                        onChange={e => setFormData(prev => ({ ...prev, course_name: e.target.value }))}
-                                        className="input-field" placeholder="e.g. Network Security Lab" required />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="sched-batch">Batch</label>
-                                    <input id="sched-batch" type="text" value={formData.batch}
-                                        onChange={e => setFormData(prev => ({ ...prev, batch: e.target.value }))}
-                                        className="input-field" placeholder="e.g. A1, B2" />
+                            {/* Course, Batch, Date & Time */}
+                            <div className="w-full">
+                                {/* Course & Batch */}
+
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="sched-room">Lab Room</label>
+                                        <select
+                                            value={labRooms.includes(formData.lab_room) ? formData.lab_room : (formData.lab_room ? '__other' : '')}
+                                            onChange={e => {
+                                                const val = e.target.value;
+                                                if (val === '__other') {
+                                                    setFormData(prev => ({ ...prev, lab_room: '' }));
+                                                } else {
+                                                    setFormData(prev => ({ ...prev, lab_room: val, lab_name: val }));
+                                                }
+                                            }}
+                                            className={selectClass}
+                                        >
+                                            <option value="">Select Room</option>
+                                            {labRooms.map(r => <option key={r} value={r}>{r}</option>)}
+                                            <option value="__other">Other...</option>
+                                        </select>
+                                        {(!labRooms.includes(formData.lab_room) && (formData.lab_room === '' || formData.lab_room)) && (
+                                            <input
+                                                type="text"
+                                                value={formData.lab_room}
+                                                onChange={e => setFormData(prev => ({ ...prev, lab_room: e.target.value, lab_name: e.target.value }))}
+                                                className="input-field mt-2"
+                                                placeholder="Enter custom room"
+                                            />
+                                        )}
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="sched-instructor">Instructor</label>
+                                        <select
+                                            value={instructors.some(i => i.name === formData.instructor_name) ? formData.instructor_name : (formData.instructor_name ? '__other' : '')}
+                                            onChange={e => {
+                                                const val = e.target.value;
+                                                if (val === '__other') setFormData(prev => ({ ...prev, instructor_name: '' }));
+                                                else setFormData(prev => ({ ...prev, instructor_name: val }));
+                                            }}
+                                            className={selectClass}
+                                        >
+                                            <option value="">Select Instructor</option>
+                                            {instructors.map(i => (
+                                                <option key={i.id} value={i.name || i.email}>
+                                                    {i.name ? i.name : i.email}
+                                                </option>
+                                            ))}
+                                            <option value="__other">Other...</option>
+                                        </select>
+                                        {(!instructors.some(i => i.name === formData.instructor_name) && (formData.instructor_name === '' || formData.instructor_name)) && (
+                                            <input
+                                                type="text"
+                                                value={formData.instructor_name}
+                                                onChange={e => setFormData(prev => ({ ...prev, instructor_name: e.target.value }))}
+                                                className="input-field mt-2"
+                                                placeholder="Enter instructor name"
+                                            />
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
                             {/* Date & Time */}
-                            <div className="p-4 bg-gray-50 rounded-2xl space-y-3">
+                            <div className="p-4 bg-gray-50 rounded-2xl space-y-3 bg-indigo-50/50">
                                 <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
                                     <Clock size={14} /> Date & Time
                                 </h3>
                                 <div className="grid grid-cols-3 gap-3">
-                                    <div>
+                                    <div className="col-span-3 sm:col-span-1">
                                         <label className="block text-xs font-medium text-gray-600 mb-1" htmlFor="sched-date">Date *</label>
                                         <input id="sched-date" type="date" value={formData.date}
                                             onChange={e => setFormData(prev => ({ ...prev, date: e.target.value }))}
@@ -332,21 +436,6 @@ const SchedulePage = () => {
                                 </div>
                             </div>
 
-                            {/* Lab & Instructor */}
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="sched-room">Lab Room</label>
-                                    <input id="sched-room" type="text" value={formData.lab_room}
-                                        onChange={e => setFormData(prev => ({ ...prev, lab_room: e.target.value, lab_name: e.target.value }))}
-                                        className="input-field" placeholder="e.g. Room 204" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="sched-instructor">Instructor</label>
-                                    <input id="sched-instructor" type="text" value={formData.instructor_name}
-                                        onChange={e => setFormData(prev => ({ ...prev, instructor_name: e.target.value }))}
-                                        className="input-field" placeholder="e.g. Dr. Sharma" />
-                                </div>
-                            </div>
 
                             {/* Actions */}
                             <div className="flex gap-3 pt-3">
@@ -362,9 +451,9 @@ const SchedulePage = () => {
                             </div>
                         </form>
                     </div>
-                </div>
+                </div >
             )}
-        </div>
+        </div >
     );
 };
 

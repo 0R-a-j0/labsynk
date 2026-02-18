@@ -8,6 +8,7 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True)
+    name = Column(String, default="test0")
     hashed_password = Column(String)
     role = Column(String) # "assistant", "hod", "principal", "admin"
     department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
@@ -33,6 +34,37 @@ class InventoryItem(Base):
 
     college = relationship("College", foreign_keys=[college_id])
     department = relationship("Department", foreign_keys=[department_id])
+
+
+class ResourceSuggestion(Base):
+    __tablename__ = "resource_suggestions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    tool_name = Column(String)
+    description = Column(String)
+    url = Column(String)
+    status = Column(String, default="Pending") # Pending, Approved, Rejected
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User")
+
+class InventoryReport(Base):
+    __tablename__ = "inventory_reports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    inventory_item_id = Column(Integer, ForeignKey("inventory.id"), nullable=True)
+    reported_item_name = Column(String, nullable=True)
+    category = Column(String, nullable=True)
+    location = Column(String, nullable=True)
+    reporter_name = Column(String, nullable=True) # For unauthenticated users
+    issue_description = Column(String)
+    status = Column(String, default="Open") # Open, Resolved
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User")
+    inventory_item = relationship("InventoryItem")
 
 class Schedule(Base):
     __tablename__ = "schedules"
