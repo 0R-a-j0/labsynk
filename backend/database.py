@@ -12,11 +12,18 @@ if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
 if "sqlite" in SQLALCHEMY_DATABASE_URL:
     connect_args = {"check_same_thread": False}
 else:
-    # For PostgreSQL (Neon/Render), ensure SSL is used
-    connect_args = {"sslmode": "require"}
+    # For PostgreSQL (Neon/Render/Supabase), ensure SSL is used
+    # "prepare_threshold": None is CRITICAL for Supabase Transaction Mode (Port 6543)
+    connect_args = {
+        "sslmode": "require",
+        "prepare_threshold": None
+    }
 
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args=connect_args
+    SQLALCHEMY_DATABASE_URL, 
+    connect_args=connect_args,
+    pool_pre_ping=True, # Handles dropped connections gracefully
+    pool_recycle=300    # Recycles connections every 5 minutes
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
