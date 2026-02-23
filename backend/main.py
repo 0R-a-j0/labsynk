@@ -2,11 +2,35 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
+import threading
+import time
+import requests as http_requests
 from pathlib import Path
 
 # Load .env from backend directory
 env_path = Path(__file__).parent / '.env'
 load_dotenv(dotenv_path=env_path)
+
+
+# ====== Keep-Alive Ping (prevents Render free-tier sleep) ======
+
+def _keep_alive():
+    """Ping own /health endpoint every 10 minutes to prevent Render spin-down."""
+    # Render sets RENDER_EXTERNAL_URL automatically; fallback to BACKEND_URL
+    base_url = os.getenv("RENDER_EXTERNAL_URL") or os.getenv("BACKEND_URL")
+    if not base_url:
+        return  # Not running on Render / no URL configured — skip
+
+    url = f"{base_url.rstrip('/')}/health"
+    interval = 10 * 60  # 10 minutes
+
+    while True:
+        time.sleep(interval)
+        try:
+            resp = http_requests.get(url, timeout=10)
+            print(f"[keep-alive] pinged {url} — {resp.status_code}")
+        except Exception as exc:
+            print(f"[keep-alive] ping failed: {exc}")
 
 import models
 from database import engine, SessionLocal
@@ -59,13 +83,17 @@ app.include_router(student_engagement.router)
 
 @app.on_event("startup")
 def startup_event():
-    """Create default admin account on server startup"""
+    """Create default admin account on server startup and start keep-alive."""
     from routers.auth import create_default_admin
     db = SessionLocal()
     try:
         create_default_admin(db)
     finally:
         db.close()
+
+    # Start keep-alive pinger (daemon thread dies with the server)
+    ping_thread = threading.Thread(target=_keep_alive, daemon=True)
+    ping_thread.start()
 
 
 @app.get("/")
