@@ -155,7 +155,19 @@ const VirtualLabs = () => {
                                             <div className="flex flex-wrap gap-2">
                                                 {exp.simulation_links.map((link, j) => {
                                                     const isYouTube = link.source?.toLowerCase().includes('youtube');
+                                                    const isVLabs = link.source?.toLowerCase().includes('vlabs');
                                                     if (link.source?.toLowerCase().includes('programiz')) return null;
+
+                                                    let btnClass = 'bg-lab-accent/10 text-lab-accent hover:bg-lab-accent hover:text-white';
+                                                    let label = link.source;
+
+                                                    if (isVLabs) {
+                                                        btnClass = 'bg-gradient-to-r from-teal-500/15 to-emerald-500/15 text-teal-600 hover:from-teal-500 hover:to-emerald-500 hover:text-white ring-1 ring-teal-500/20';
+                                                        label = '🔬 IIT VLabs';
+                                                    } else if (isYouTube) {
+                                                        btnClass = 'bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white';
+                                                        label = 'Watch Video';
+                                                    }
 
                                                     return (
                                                         <a
@@ -163,13 +175,10 @@ const VirtualLabs = () => {
                                                             href={link.url}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
-                                                            className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 ${isYouTube
-                                                                ? 'bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white'
-                                                                : 'bg-lab-accent/10 text-lab-accent hover:bg-lab-accent hover:text-white'
-                                                                }`}
+                                                            className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 ${btnClass}`}
                                                             title={link.description}
                                                         >
-                                                            {isYouTube ? 'Watch Video' : link.source}
+                                                            {label}
                                                             <ExternalLink size={12} />
                                                         </a>
                                                     );

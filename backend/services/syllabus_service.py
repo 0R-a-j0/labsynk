@@ -1,4 +1,5 @@
 import os
+from services.vlabs_matcher import find_vlabs_link
 try:
     from google import genai
     from google.genai import types
@@ -336,11 +337,17 @@ def get_simulation_links(simulation_name: str, subject_name: str = "") -> list:
     """
     Generates relevant simulation/practice links based on the topic.
     Detects the programming language from the subject name first, then topic.
+    Includes IIT VLabs links when a match is found in the VLabs database.
     Uses only Programiz for online compilers + YouTube for tutorials.
     """
     # Combine subject name + topic for language detection (subject takes priority)
     combined_text = f"{subject_name} {simulation_name}".lower()
     links = []
+
+    # ===== IIT VLabs match (prepend if found) =====
+    vlabs_link = find_vlabs_link(simulation_name, subject_name)
+    if vlabs_link:
+        links.append(vlabs_link)
 
     # ===== Programiz language URL map =====
     # Key: keyword to detect | Value: Programiz URL slug

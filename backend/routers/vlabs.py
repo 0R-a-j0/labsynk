@@ -467,7 +467,8 @@ def save_to_vlabs(data: SaveToVLabsRequest, db: Session = Depends(get_db)):
             for exp_data in experiments_list:
                 # Get simulation links
                 links = syllabus_service.get_simulation_links(
-                    exp_data.get("suggested_simulation", exp_data.get("topic", ""))
+                    exp_data.get("suggested_simulation", exp_data.get("topic", "")),
+                    subject_name=subj_data.get("subject", "")
                 )
                 
                 experiment = VLabExperiment(

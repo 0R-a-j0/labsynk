@@ -1,9 +1,71 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import {
-    Beaker, Layers, Calendar, BookOpen, FileText, Bot,
-    ArrowRight, Sparkles, Zap, Globe, ChevronRight
+    Beaker, Layers, Calendar, BookOpen, FileText,
+    ArrowRight, Sparkles, Zap, Globe, ChevronRight, Code, User, Clock
 } from 'lucide-react';
+import CyberneticGridShader from '../components/ui/cybernetic-grid-shader';
+import RadialOrbitalTimeline from '../components/ui/radial-orbital-timeline';
+import { FeatureSteps } from '../components/ui/feature-section';
+import { SecureMessageGateway } from '../components/ui/secure-message-gateway';
+
+const timelineData = [
+    {
+        id: 1,
+        title: "Inventory Setup",
+        date: "Phase 1",
+        content: "Equipment tracking, real-time availability, and smart search across all labs.",
+        category: "Infrastructure",
+        icon: Layers,
+        relatedIds: [2],
+        status: "completed",
+        energy: 100,
+    },
+    {
+        id: 2,
+        title: "Smart Scheduling",
+        date: "Phase 2",
+        content: "Conflict-free lab bookings with timetable management by semester and branch.",
+        category: "Management",
+        icon: Calendar,
+        relatedIds: [1, 3],
+        status: "completed",
+        energy: 90,
+    },
+    {
+        id: 3,
+        title: "Virtual Labs",
+        date: "Phase 3",
+        content: "vLabs IIT Bombay simulations directly linked to your syllabus experiments.",
+        category: "Learning",
+        icon: BookOpen,
+        relatedIds: [2, 4],
+        status: "completed",
+        energy: 80,
+    },
+    {
+        id: 4,
+        title: "AI Syllabus Parser",
+        date: "Phase 4",
+        content: "Upload PDFs and let AI extract experiments, map simulations automatically.",
+        category: "AI",
+        icon: Code,
+        relatedIds: [3, 5],
+        status: "in-progress",
+        energy: 60,
+    },
+    {
+        id: 5,
+        title: "AI Assistant",
+        date: "Phase 5",
+        content: "Intelligent lab companion for experiments, theory, and navigation help.",
+        category: "AI",
+        icon: Sparkles,
+        relatedIds: [4],
+        status: "in-progress",
+        energy: 45,
+    },
+];
 
 const Home = () => {
     const features = [
@@ -13,7 +75,7 @@ const Home = () => {
             description: 'Real-time component availability. Search for equipment across labs instantly.',
             link: '/inventory',
             color: 'from-indigo-500 to-violet-600',
-            iconBg: 'bg-indigo-100 text-indigo-600',
+            iconBg: 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400',
         },
         {
             icon: Calendar,
@@ -21,7 +83,7 @@ const Home = () => {
             description: 'Conflict-free lab bookings. View timetables by semester and branch.',
             link: '/schedule',
             color: 'from-violet-500 to-purple-600',
-            iconBg: 'bg-violet-100 text-violet-600',
+            iconBg: 'bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400',
         },
         {
             icon: FileText,
@@ -29,7 +91,7 @@ const Home = () => {
             description: 'Upload PDFs and let AI extract experiments, map simulations automatically.',
             link: '/syllabus',
             color: 'from-cyan-500 to-blue-600',
-            iconBg: 'bg-cyan-100 text-cyan-600',
+            iconBg: 'bg-cyan-100 dark:bg-cyan-900/40 text-cyan-600 dark:text-cyan-400',
         },
         {
             icon: BookOpen,
@@ -37,15 +99,16 @@ const Home = () => {
             description: 'Access vLabs IIT Bombay simulations directly linked to your syllabus.',
             link: '/labs',
             color: 'from-teal-500 to-emerald-600',
-            iconBg: 'bg-teal-100 text-teal-600',
+            iconBg: 'bg-teal-100 dark:bg-teal-900/40 text-teal-600 dark:text-teal-400',
         },
         {
-            icon: Bot,
+            icon: Sparkles,
             title: 'AI Assistant',
             description: 'Get instant help with experiments, theory, and lab navigation.',
-            link: '/assist',
+            link: '#',
             color: 'from-pink-500 to-rose-600',
-            iconBg: 'bg-pink-100 text-pink-600',
+            iconBg: 'bg-pink-100 dark:bg-pink-900/40 text-pink-600 dark:text-pink-400',
+            isAssistant: true,
         },
     ];
 
@@ -58,13 +121,16 @@ const Home = () => {
 
     return (
         <div>
-            {/* ===== Hero Section ===== */}
+            {/* ===== Hero Section with Cybernetic Grid Shader ===== */}
             <section
                 className="relative overflow-hidden bg-hero-gradient min-h-[800px]"
                 style={{ maskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)' }}
             >
+                {/* Cybernetic Grid Shader Background */}
+                <CyberneticGridShader />
+
                 {/* Animated background elements */}
-                <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
+                <div className="absolute inset-0 overflow-hidden z-[2]" aria-hidden="true">
                     {/* Grid overlay */}
                     <div className="absolute inset-0"
                         style={{
@@ -124,7 +190,7 @@ const Home = () => {
                         </div>
                     </div>
 
-                    {/* Stats Bar - Moved inside hero */}
+                    {/* Stats Bar */}
                     <div className="mt-20 max-w-5xl">
                         <div className="glass rounded-2xl p-1 shadow-glass-lg backdrop-blur-md bg-white/5 border border-white/10">
                             <div className="grid grid-cols-2 md:grid-cols-4">
@@ -148,14 +214,12 @@ const Home = () => {
                         </div>
                     </div>
                 </div>
-
-
             </section>
 
             {/* ===== Features Section ===== */}
             <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
                 <div className="text-center mb-16">
-                    <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+                    <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
                         Everything Your Lab Needs
                     </h2>
                     <p className="text-lg text-lab-muted max-w-2xl mx-auto">
@@ -164,32 +228,89 @@ const Home = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {features.map((feature, i) => (
-                        <Link
-                            key={feature.title}
-                            to={feature.link}
-                            className="glass-card group p-6 animate-fade-in-up block"
-                            style={{ opacity: 0, animationDelay: `${i * 100}ms` }}
-                        >
-                            <div className={`${feature.iconBg} w-12 h-12 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
-                                <feature.icon size={24} />
-                            </div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-lab-primary transition-colors">
-                                {feature.title}
-                            </h3>
-                            <p className="text-gray-500 text-sm leading-relaxed mb-4">
-                                {feature.description}
-                            </p>
-                            <span className="inline-flex items-center gap-1 text-sm font-semibold text-lab-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                Explore <ArrowRight size={14} />
-                            </span>
-                        </Link>
-                    ))}
+                    {features.map((feature, i) => {
+                        const CardWrapper = feature.isAssistant ? 'div' : Link;
+                        const cardProps = feature.isAssistant
+                            ? {
+                                onClick: () => {
+                                    // Trigger the floating assistant
+                                    const trigger = document.getElementById('floating-assistant-trigger');
+                                    if (trigger) trigger.click();
+                                },
+                                role: 'button',
+                                tabIndex: 0,
+                            }
+                            : { to: feature.link };
+
+                        return (
+                            <CardWrapper
+                                key={feature.title}
+                                {...cardProps}
+                                className="glass-card group p-6 animate-fade-in-up block cursor-pointer"
+                                style={{ opacity: 0, animationDelay: `${i * 100}ms` }}
+                            >
+                                <div className={`${feature.iconBg} w-12 h-12 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
+                                    <feature.icon size={24} />
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 group-hover:text-lab-primary dark:group-hover:text-lab-accent transition-colors">
+                                    {feature.title}
+                                </h3>
+                                <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed mb-4">
+                                    {feature.description}
+                                </p>
+                                <span className="inline-flex items-center gap-1 text-sm font-semibold text-lab-primary dark:text-lab-accent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                    {feature.isAssistant ? 'Ask AI' : 'Explore'} <ArrowRight size={14} />
+                                </span>
+                            </CardWrapper>
+                        );
+                    })}
                 </div>
-            </section >
+            </section>
+
+            {/* ===== Getting Started (FeatureSteps) ===== */}
+            <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+                <FeatureSteps
+                    features={[
+                        {
+                            step: 'Step 1',
+                            title: 'Browse Lab Inventory',
+                            content: 'Search equipment across all labs in real-time. Check availability, quantities, and locations — no login required.',
+                            image: '/step1-inventory.png',
+                        },
+                        {
+                            step: 'Step 2',
+                            title: 'Schedule Your Lab Session',
+                            content: 'Book conflict-free lab slots by semester and branch. Staff can manage timetables with a few clicks.',
+                            image: '/step2-schedule.png',
+                        },
+                        {
+                            step: 'Step 3',
+                            title: 'Run Virtual Simulations',
+                            content: 'Access IIT Bombay vLabs experiments directly linked to your syllabus. Learn, practice, and validate anywhere.',
+                            image: '/step3-virtual-lab.png',
+                        },
+                    ]}
+                    title="Get Started in 3 Steps"
+                />
+            </section>
+
+            {/* ===== Project Timeline Section ===== */}
+            <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+                <div className="text-center mb-8">
+                    <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+                        Platform Development
+                    </h2>
+                    <p className="text-lg text-lab-muted max-w-2xl mx-auto">
+                        Track our progress across each phase of LABSYNk's evolution.
+                    </p>
+                </div>
+                <div className="glass-card overflow-hidden">
+                    <RadialOrbitalTimeline timelineData={timelineData} />
+                </div>
+            </section>
 
             {/* ===== CTA Section ===== */}
-            < section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24" >
+            <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
                 <div className="relative overflow-hidden bg-gradient-to-r from-lab-primary via-lab-secondary to-lab-accent rounded-3xl p-12 md:p-16 text-center">
                     {/* Background decoration */}
                     <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
@@ -224,8 +345,21 @@ const Home = () => {
                         </div>
                     </div>
                 </div>
-            </section >
-        </div >
+            </section>
+
+            {/* ===== Feedback Terminal (SecureMessageGateway) ===== */}
+            <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 pb-24">
+                <div className="text-center mb-8">
+                    <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+                        Lab Terminal
+                    </h2>
+                    <p className="text-lg text-lab-muted max-w-2xl mx-auto">
+                        Have feedback, suggestions, or a bug report? Drop us a secure message.
+                    </p>
+                </div>
+                <SecureMessageGateway />
+            </section>
+        </div>
     );
 };
 
