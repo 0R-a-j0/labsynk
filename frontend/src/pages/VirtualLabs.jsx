@@ -153,36 +153,62 @@ const VirtualLabs = () => {
                                         )}
                                         {exp.simulation_links?.length > 0 ? (
                                             <div className="flex flex-wrap gap-2">
-                                                {exp.simulation_links.map((link, j) => {
-                                                    const isYouTube = link.source?.toLowerCase().includes('youtube');
-                                                    const isVLabs = link.source?.toLowerCase().includes('vlabs');
-                                                    if (link.source?.toLowerCase().includes('programiz')) return null;
-
-                                                    let btnClass = 'bg-lab-accent/10 text-lab-accent hover:bg-lab-accent hover:text-white';
-                                                    let label = link.source;
-
-                                                    if (isVLabs) {
-                                                        btnClass = 'bg-gradient-to-r from-teal-500/15 to-emerald-500/15 text-teal-600 hover:from-teal-500 hover:to-emerald-500 hover:text-white ring-1 ring-teal-500/20';
-                                                        label = '🔬 IIT VLabs';
-                                                    } else if (isYouTube) {
-                                                        btnClass = 'bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white';
-                                                        label = 'Watch Video';
-                                                    }
-
-                                                    return (
-                                                        <a
-                                                            key={j}
-                                                            href={link.url}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 ${btnClass}`}
-                                                            title={link.description}
-                                                        >
-                                                            {label}
-                                                            <ExternalLink size={12} />
-                                                        </a>
+                                                {(() => {
+                                                    const hasVLabs = exp.simulation_links.some(l =>
+                                                        l.source?.toLowerCase().includes('vlabs') &&
+                                                        !l.source?.toLowerCase().includes('virtual labs india')
                                                     );
-                                                })}
+                                                    return (
+                                                        <>
+                                                            {!hasVLabs && (
+                                                                <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md bg-amber-50 text-amber-600 ring-1 ring-amber-200">
+                                                                    ⚠ VLabs not available
+                                                                </span>
+                                                            )}
+                                                            {exp.simulation_links.map((link, j) => {
+                                                                const src = link.source?.toLowerCase() ?? '';
+                                                                const isYouTube = src.includes('youtube');
+                                                                const isVLabs = src.includes('vlabs') && !src.includes('virtual labs india');
+                                                                const isProgramiz = src.includes('programiz');
+
+                                                                // Skip generic fallback links that have no real match
+                                                                const isGenericFallback =
+                                                                    src.includes('phet') ||
+                                                                    src.includes('virtual labs india') ||
+                                                                    src.includes('olabs');
+
+                                                                if (isGenericFallback) return null;
+
+                                                                let btnClass = 'bg-lab-accent/10 text-lab-accent hover:bg-lab-accent hover:text-white';
+                                                                let label = link.source;
+
+                                                                if (isVLabs) {
+                                                                    btnClass = 'bg-gradient-to-r from-teal-500/15 to-emerald-500/15 text-teal-600 hover:from-teal-500 hover:to-emerald-500 hover:text-white ring-1 ring-teal-500/20';
+                                                                    label = '🔬 IIT VLabs';
+                                                                } else if (isYouTube) {
+                                                                    btnClass = 'bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white';
+                                                                    label = 'Watch Video';
+                                                                } else if (isProgramiz) {
+                                                                    btnClass = 'bg-lab-accent/10 text-lab-accent hover:bg-lab-accent hover:text-white';
+                                                                }
+
+                                                                return (
+                                                                    <a
+                                                                        key={j}
+                                                                        href={link.url}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 ${btnClass}`}
+                                                                        title={link.description}
+                                                                    >
+                                                                        {label}
+                                                                        <ExternalLink size={12} />
+                                                                    </a>
+                                                                );
+                                                            })}
+                                                        </>
+                                                    );
+                                                })()}
                                                 {currentSubject?.default_compiler && (
                                                     <a
                                                         href={currentSubject.default_compiler}
