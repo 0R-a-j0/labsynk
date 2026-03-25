@@ -146,6 +146,5 @@ export function FeatureSteps({
                 </div>
             </div>
         </div>
-        </div >
     )
 }
