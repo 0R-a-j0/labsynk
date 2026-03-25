@@ -160,11 +160,7 @@ const VirtualLabs = () => {
                                                     );
                                                     return (
                                                         <>
-                                                            {!hasVLabs && (
-                                                                <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md bg-amber-50 text-amber-600 ring-1 ring-amber-200">
-                                                                    ⚠ VLabs not available
-                                                                </span>
-                                                            )}
+
                                                             {exp.simulation_links.map((link, j) => {
                                                                 const src = link.source?.toLowerCase() ?? '';
                                                                 const isYouTube = src.includes('youtube');
@@ -184,7 +180,7 @@ const VirtualLabs = () => {
 
                                                                 if (isVLabs) {
                                                                     btnClass = 'bg-gradient-to-r from-teal-500/15 to-emerald-500/15 text-teal-600 hover:from-teal-500 hover:to-emerald-500 hover:text-white ring-1 ring-teal-500/20';
-                                                                    label = '🔬 IIT VLabs';
+                                                                    label = 'IIT VLabs';
                                                                 } else if (isYouTube) {
                                                                     btnClass = 'bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white';
                                                                     label = 'Watch Video';
