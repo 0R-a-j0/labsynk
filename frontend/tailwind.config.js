@@ -4,11 +4,12 @@ export default {
         "./index.html",
         "./src/**/*.{js,ts,jsx,tsx}",
     ],
+    darkMode: 'class',
     theme: {
         extend: {
             colors: {
-                'lab-bg': '#F5F7FF',
-                'lab-surface': '#FFFFFF',
+                'lab-bg': 'var(--color-bg)',
+                'lab-surface': 'var(--color-surface)',
                 'lab-primary': '#2A1B75',
                 'lab-secondary': '#4834A6',
                 'lab-accent': '#0099CC',

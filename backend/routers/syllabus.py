@@ -71,7 +71,10 @@ async def upload_syllabus(file: UploadFile = File(...)):
     
     for subject in subjects_data:
         for exp in subject["experiments"]:
-            links = syllabus_service.get_simulation_links(exp.get("suggested_simulation", exp["topic"]))
+            links = syllabus_service.get_simulation_links(
+                exp.get("suggested_simulation", exp["topic"]),
+                subject_name=subject["subject"]
+            )
             all_experiments.append({
                 "id": experiment_counter,
                 "subject": subject["subject"],

@@ -1,16 +1,18 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
+import { LenisProvider } from './components/LenisProvider';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Inventory from './pages/Inventory';
 import SchedulePage from './pages/Schedule';
 import VirtualLabs from './pages/VirtualLabs';
-import Assistant from './pages/Assistant';
 import Syllabus from './pages/Syllabus';
 import Admin from './pages/Admin';
 import ResourceHub from './pages/ResourceHub';
 import Login from './pages/Login';
+import { Shield } from 'lucide-react';
 
 // Protected route component for admin pages
 const ProtectedRoute = ({ children, requiredRole = 'assistant' }) => {
@@ -27,11 +29,14 @@ const ProtectedRoute = ({ children, requiredRole = 'assistant' }) => {
   if (!hasRole(requiredRole)) {
     return (
       <div className="text-center py-20">
-        <h1 className="text-2xl font-bold text-gray-800 mb-4">🔒 Access Restricted</h1>
-        <p className="text-gray-500">
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-4">
+          <Shield className="inline-block mr-2" size={24} />
+          Access Restricted
+        </h1>
+        <p className="text-gray-500 dark:text-gray-400">
           You need to be logged in as {requiredRole} or higher to access this page.
         </p>
-        <a href="/login" className="text-lab-primary hover:underline mt-4 inline-block">
+        <a href="/login" className="text-lab-primary dark:text-lab-accent hover:underline mt-4 inline-block">
           Go to Login
         </a>
       </div>
@@ -55,7 +60,6 @@ function AppRoutes() {
         <Route path="labs" element={<VirtualLabs />} />
         <Route path="resources" element={<ResourceHub />} />
         <Route path="syllabus" element={<Syllabus />} />
-        <Route path="assist" element={<Assistant />} />
         <Route
           path="admin"
           element={
@@ -72,9 +76,13 @@ function AppRoutes() {
 function App() {
   return (
     <Router>
-      <AuthProvider>
-        <AppRoutes />
-      </AuthProvider>
+      <ThemeProvider>
+        <LenisProvider>
+          <AuthProvider>
+            <AppRoutes />
+          </AuthProvider>
+        </LenisProvider>
+      </ThemeProvider>
     </Router>
   );
 }
