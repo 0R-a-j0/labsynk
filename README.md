@@ -1,0 +1,1 @@
+![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/0R-a-j0/labsynk?utm_source=oss&utm_medium=github&utm_campaign=0R-a-j0%2Flabsynk&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
