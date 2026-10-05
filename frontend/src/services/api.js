@@ -1,4 +1,4 @@
-export const API_URL = (import.meta.env?.VITE_API_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
+export const API_URL = (import.meta.env?.VITE_API_URL || '/api').replace(/\/$/, '');
 
 const queryString = (values) => {
     const params = new URLSearchParams();
@@ -17,15 +17,27 @@ async function request(path, { method = 'GET', body, token, anonymous = false, s
         headers['Content-Type'] = 'application/json';
         body = JSON.stringify(body);
     }
-    const response = await fetch(`${API_URL}${path}`, { method, headers, body, signal });
+    let response;
+    try {
+        response = await fetch(`${API_URL}${path}`, { method, headers, body, signal });
+    } catch (error) {
+        if (signal?.aborted || error.name === 'AbortError') throw error;
+        throw new Error('Cannot reach the API. Check your connection and try again. If this continues, the site’s backend or API URL needs attention.', { cause: error });
+    }
     if (!response.ok) {
         const error = await response.json().catch(() => ({}));
         const detail = typeof error.detail === 'string' ? error.detail
             : Array.isArray(error.detail) ? error.detail.map(item => item.msg).join('; ')
-                : `Request failed (${response.status})`;
+                : response.status >= 500
+                    ? `The API is unavailable (${response.status}). Please try again shortly.`
+                    : `Request failed (${response.status})`;
         throw new Error(detail);
     }
-    return response.status === 204 ? null : response.json();
+    if (response.status === 204) return null;
+    if (response.headers.get('content-type')?.includes('text/html')) {
+        throw new Error('The API returned a web page instead of data. Check the site’s API URL or /api proxy configuration.');
+    }
+    return response.json();
 }
 
 const upload = (path, file, options = {}) => {

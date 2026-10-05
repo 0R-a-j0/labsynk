@@ -36,18 +36,18 @@ test('login does not forward a stale token; explicit tokens work', async () => {
 
 test('query strings preserve user input and filters', async () => {
     await api.searchInventory('a&limit=999#fragment');
-    assert.equal(new URL(calls[0].url).searchParams.get('q'), 'a&limit=999#fragment');
-    assert.equal(new URL(calls[0].url).searchParams.has('limit'), false);
+    assert.equal(new URL(calls[0].url, 'https://preview.example').searchParams.get('q'), 'a&limit=999#fragment');
+    assert.equal(new URL(calls[0].url, 'https://preview.example').searchParams.has('limit'), false);
     await api.getInventory(0, 200, { college_id: 2, department_id: 3 });
-    assert.equal(new URL(calls[1].url).searchParams.get('department_id'), '3');
+    assert.equal(new URL(calls[1].url, 'https://preview.example').searchParams.get('department_id'), '3');
 });
 
 test('moderation matches backend paths and PATCH methods', async () => {
     await api.getSuggestions();
     await api.updateSuggestionStatus(1, 'Approved');
     await api.updateReportStatus(2, 'Resolved');
-    assert.equal(new URL(calls[0].url).pathname, '/engagement/resources/suggestions');
-    assert.equal(new URL(calls[1].url).pathname, '/engagement/resources/suggestions/1/status');
+    assert.equal(new URL(calls[0].url, 'https://preview.example').pathname, '/api/engagement/resources/suggestions');
+    assert.equal(new URL(calls[1].url, 'https://preview.example').pathname, '/api/engagement/resources/suggestions/1/status');
     assert.equal(calls[1].method, 'PATCH');
     assert.equal(calls[2].method, 'PATCH');
 });
@@ -65,4 +65,26 @@ test('syllabus scans propagate cancellation without overriding multipart headers
     assert.equal(calls[0].signal, controller.signal);
     assert.ok(calls[0].body instanceof FormData);
     assert.equal(calls[0].headers['Content-Type'], undefined);
+});
+
+
+test('default API requests stay on the website origin', async () => {
+    await api.uploadSyllabus(new Blob(['%PDF-1.4']));
+    assert.equal(API_URL, '/api');
+    assert.equal(calls[0].url, '/api/syllabus/upload');
+});
+
+test('transport failures explain connectivity and preserve cancellation', async () => {
+    globalThis.fetch = async () => { throw new TypeError('Failed to fetch'); };
+    await assert.rejects(api.uploadSyllabus(new Blob(['%PDF-1.4'])), /Cannot reach the API/);
+    const cancelled = new DOMException('Cancelled', 'AbortError');
+    globalThis.fetch = async () => { throw cancelled; };
+    await assert.rejects(api.uploadSyllabus(new Blob(['%PDF-1.4'])), error => error === cancelled);
+});
+
+test('gateway failures and misrouted HTML responses are actionable', async () => {
+    globalThis.fetch = async () => new Response('', { status: 503 });
+    await assert.rejects(api.getColleges(), /API is unavailable \(503\)/);
+    globalThis.fetch = async () => new Response('<html>App</html>', { headers: { 'content-type': 'text/html' } });
+    await assert.rejects(api.getColleges(), /proxy configuration/);
 });

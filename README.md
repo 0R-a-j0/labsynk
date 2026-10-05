@@ -30,10 +30,18 @@ cd backend
 
 ```bash
 cd frontend
-VITE_API_URL=http://localhost:8000 npm run dev
+npm run dev
 ```
 
 The frontend opens at `http://localhost:5173/`; backend readiness is `/health`.
+During development, browser requests use `/api` on the frontend origin; Vite
+forwards them to port 8000. Start both services, including after sandbox restoration.
+Do not set a loopback `VITE_API_URL` for a remotely accessed preview.
+For production, set `VITE_API_URL` to the reachable HTTPS backend before building
+(the committed production default uses Render), or configure your host to proxy
+`/api` to the backend. Vite's development proxy is not part of the static build.
+The backend's `FRONTEND_URL` must match the deployed frontend origin for direct API
+calls. Upload proxy timeouts must exceed the scanner's 90-second limit.
 SQLite is the local default. Production can set `DATABASE_URL` to PostgreSQL;
 connections use psycopg2 with required SSL. Set `FRONTEND_URL` to the frontend origin.
 `GEMINI_API_KEY` enables Gemini; otherwise the assistant reports offline mode.
