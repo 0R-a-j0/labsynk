@@ -1,4 +1,5 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator
+from utils.validation import HTTPURL
 from datetime import datetime
 from typing import Optional, List
 
@@ -80,7 +81,13 @@ class ScheduleBase(BaseModel):
     lab_room: Optional[str] = None
 
 class ScheduleCreate(ScheduleBase):
-    pass
+    @model_validator(mode="after")
+    def valid_interval(self):
+        if (self.start_time.tzinfo is None) != (self.end_time.tzinfo is None):
+            raise ValueError("Schedule times must use the same timezone format")
+        if self.end_time <= self.start_time:
+            raise ValueError("End time must be after start time")
+        return self
 
 class Schedule(ScheduleBase):
     id: int
@@ -92,7 +99,7 @@ class Schedule(ScheduleBase):
 class ResourceSuggestionBase(BaseModel):
     tool_name: str
     description: str
-    url: str
+    url: HTTPURL
 
 class ResourceSuggestionCreate(ResourceSuggestionBase):
     pass
@@ -107,7 +114,7 @@ class ResourceSuggestion(ResourceSuggestionBase):
 
 class InventoryReportBase(BaseModel):
     inventory_item_id: int
-    issue_description: str
+    issue_description: str = Field(min_length=1, max_length=4000)
     reporter_name: Optional[str] = None # For unauthenticated users
 
 class InventoryReportCreate(InventoryReportBase):

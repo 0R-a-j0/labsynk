@@ -2,38 +2,23 @@
 Unit tests for VLabs API endpoints
 """
 import pytest
-from fastapi.testclient import TestClient
-import sys
-import os
-
-# Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-
-from backend.main import app
-from backend.database import Base, engine, SessionLocal
-
-client = TestClient(app)
 
 
 @pytest.fixture(autouse=True)
-def setup_db():
-    """Create tables before each test and drop after"""
-    Base.metadata.create_all(bind=engine)
-    yield
-    # Don't drop tables to preserve existing data
-    # Base.metadata.drop_all(bind=engine)
+def authenticated_client(client, auth_headers):
+    client.headers.update(auth_headers("principal"))
 
 
 class TestColleges:
     """Tests for /vlabs/colleges endpoints"""
     
-    def test_list_colleges_empty(self):
+    def test_list_colleges_empty(self, client):
         """Test listing colleges when none exist"""
         response = client.get("/vlabs/colleges")
         assert response.status_code == 200
         assert isinstance(response.json(), list)
     
-    def test_create_college(self):
+    def test_create_college(self, client):
         """Test creating a new college"""
         response = client.post("/vlabs/colleges", json={"name": "Test College"})
         assert response.status_code == 200
@@ -41,7 +26,7 @@ class TestColleges:
         assert data["name"] == "Test College"
         assert "id" in data
     
-    def test_create_duplicate_college(self):
+    def test_create_duplicate_college(self, client):
         """Test creating duplicate college fails"""
         client.post("/vlabs/colleges", json={"name": "Duplicate College"})
         response = client.post("/vlabs/colleges", json={"name": "Duplicate College"})
@@ -51,7 +36,7 @@ class TestColleges:
 class TestDepartments:
     """Tests for /vlabs/departments endpoints"""
     
-    def test_create_department(self):
+    def test_create_department(self, client):
         """Test creating a department"""
         # First create a college
         college_resp = client.post("/vlabs/colleges", json={"name": "Dept Test College"})
@@ -65,7 +50,7 @@ class TestDepartments:
         assert response.status_code == 200
         assert response.json()["name"] == "Computer Science"
     
-    def test_filter_departments_by_college(self):
+    def test_filter_departments_by_college(self, client):
         """Test filtering departments by college"""
         # Create college
         college_resp = client.post("/vlabs/colleges", json={"name": "Filter Test College"})
@@ -87,7 +72,7 @@ class TestDepartments:
 class TestSubjects:
     """Tests for /vlabs/subjects endpoints"""
     
-    def test_create_subject(self):
+    def test_create_subject(self, client):
         """Test creating a subject"""
         # Create college and department first
         college_resp = client.post("/vlabs/colleges", json={"name": "Subject Test College"})
@@ -113,7 +98,7 @@ class TestSubjects:
 class TestExperiments:
     """Tests for /vlabs/experiments endpoint"""
     
-    def test_list_experiments_empty(self):
+    def test_list_experiments_empty(self, client):
         """Test listing experiments"""
         response = client.get("/vlabs/experiments")
         assert response.status_code == 200
@@ -123,7 +108,7 @@ class TestExperiments:
 class TestSaveToVLabs:
     """Tests for /vlabs/save endpoint"""
     
-    def test_save_syllabus(self):
+    def test_save_syllabus(self, client):
         """Test saving parsed syllabus data"""
         # Create college and department
         college_resp = client.post("/vlabs/colleges", json={"name": "Save Test College"})

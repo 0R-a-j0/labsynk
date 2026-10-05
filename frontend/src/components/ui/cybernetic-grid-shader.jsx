@@ -13,7 +13,13 @@ const CyberneticGridShader = ({ className = '', style = {} }) => {
         if (!container) return;
 
         // 1) Renderer, Scene, Camera, Clock
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        let renderer;
+        try {
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        } catch {
+            // The decorative background is optional on devices without WebGL.
+            return;
+        }
         renderer.setPixelRatio(window.devicePixelRatio);
         container.appendChild(renderer.domElement);
 

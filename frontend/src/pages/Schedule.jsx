@@ -44,7 +44,6 @@ const SchedulePage = () => {
         const fetchBio = async () => {
             try {
                 fetchSchedules();
-                loadInstructors();
 
                 // Fetch colleges
                 try {
@@ -72,14 +71,16 @@ const SchedulePage = () => {
         fetchBio();
     }, []);
 
-    const loadInstructors = async () => {
-        try {
-            const users = await api.getDirectory();
-            // Filter only assistants as per requirement
-            const inst = users.filter(u => u.role === 'assistant');
-            setInstructors(inst);
-        } catch (err) { console.error('Failed to load instructors:', err); }
-    };
+    useEffect(() => {
+        if (!user) return;
+        let active = true;
+        api.getDirectory()
+            .then(users => {
+                if (active) setInstructors(users.filter(item => item.role === 'assistant'));
+            })
+            .catch(err => console.error('Failed to load instructors:', err));
+        return () => { active = false; };
+    }, [user]);
 
     const fetchSchedules = async () => {
         try { const data = await api.getSchedules(); setSchedules(data); }
@@ -162,7 +163,7 @@ const SchedulePage = () => {
     const handleDelete = async (id) => {
         if (!window.confirm('Remove this booking?')) return;
         try {
-            await fetch(`http://127.0.0.1:8000/schedule/${id}`, { method: 'DELETE' });
+            await api.deleteSchedule(id);
             fetchSchedules();
         } catch (err) { console.error(err); }
     };

@@ -62,33 +62,9 @@ const Inventory = () => {
     const fetchItems = useCallback(async (collegeId, deptId) => {
         setLoading(true);
         try {
-            // Use local filtering if API filtering not available or complex
-            // For now, simpler to fetch all and filter client side if needed, or use the API params
-            // But let's stick to the URL structure but use the imported api object's base URL logic if possible
-            // Actually, let's just use api.getInventory if params are empty, or construct URL using relative path if proxy is set, or full path matching api.js
-
-            // To fix "Failed to fetch", we should ensure we are hitting the right port. 
-            // The best way is to rely on api.js logic.
-
-            // Let's implement a direct fetch using the variable from api.js context if we could, but we can't easily.
-            // So we will just correct the URL to point to localhost:8000 which is standard, 
-            // but wrapped in a try/catch that falls back to api.getInventory() which uses the constant.
-
-            // Actually, api.js exports API_URL? No, it's internal.
-            // Let's just use the fallback logic primarily.
-
-            let data;
-            if (collegeId || deptId) {
-                let url = `http://127.0.0.1:8000/inventory/?skip=0&limit=200`;
-                if (collegeId) url += `&college_id=${collegeId}`;
-                if (deptId) url += `&department_id=${deptId}`;
-
-                const response = await fetch(url);
-                if (!response.ok) throw new Error('Failed to fetch');
-                data = await response.json();
-            } else {
-                data = await api.getInventory();
-            }
+            const data = await api.getInventory(0, 200, {
+                college_id: collegeId, department_id: deptId,
+            });
             setItems(data);
         } catch (err) {
             console.error(err);
@@ -215,7 +191,7 @@ const Inventory = () => {
     const handleDelete = async (item) => {
         if (!window.confirm(`Delete "${item.name}"?`)) return;
         try {
-            await fetch(`http://127.0.0.1:8000/inventory/${item.id}`, { method: 'DELETE' });
+            await api.deleteItem(item.id);
             fetchItems(filterCollege || undefined, filterDept || undefined);
         } catch (err) { console.error(err); }
     };

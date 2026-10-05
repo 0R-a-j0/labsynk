@@ -1,3 +1,4 @@
+from utils.auth import require_role
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -12,8 +13,8 @@ router = APIRouter(
 
 @router.get("/", response_model=List[schemas.Inventory])
 def read_inventory(
-    skip: int = 0,
-    limit: int = 100,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
     college_id: Optional[int] = Query(None),
     department_id: Optional[int] = Query(None),
     subject: Optional[str] = Query(None),
@@ -29,20 +30,20 @@ def read_inventory(
     items = query.offset(skip).limit(limit).all()
     return items
 
-@router.post("/", response_model=schemas.Inventory)
+@router.post("/", response_model=schemas.Inventory, dependencies=[Depends(require_role("assistant"))])
 def create_inventory_item(item: schemas.InventoryCreate, db: Session = Depends(get_db)):
-    db_item = models.InventoryItem(**item.dict())
+    db_item = models.InventoryItem(**item.model_dump())
     db.add(db_item)
     db.commit()
     db.refresh(db_item)
     return db_item
 
 @router.get("/search", response_model=List[schemas.Inventory])
-def search_inventory(q: str, db: Session = Depends(get_db)):
+def search_inventory(q: str = Query(min_length=1, max_length=200), db: Session = Depends(get_db)):
     items = db.query(models.InventoryItem).filter(
         models.InventoryItem.name.contains(q) |
         models.InventoryItem.category.contains(q)
-    ).all()
+    ).limit(100).all()
     return items
 
 @router.get("/{item_id}", response_model=schemas.Inventory)
@@ -52,20 +53,20 @@ def read_inventory_item(item_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Item not found")
     return item
 
-@router.put("/{item_id}", response_model=schemas.Inventory)
+@router.put("/{item_id}", response_model=schemas.Inventory, dependencies=[Depends(require_role("assistant"))])
 def update_inventory_item(item_id: int, item: schemas.InventoryUpdate, db: Session = Depends(get_db)):
     db_item = db.query(models.InventoryItem).filter(models.InventoryItem.id == item_id).first()
     if db_item is None:
         raise HTTPException(status_code=404, detail="Item not found")
 
-    for key, value in item.dict(exclude_unset=True).items():
+    for key, value in item.model_dump(exclude_unset=True).items():
         setattr(db_item, key, value)
 
     db.commit()
     db.refresh(db_item)
     return db_item
 
-@router.delete("/{item_id}")
+@router.delete("/{item_id}", dependencies=[Depends(require_role("assistant"))])
 def delete_inventory_item(item_id: int, db: Session = Depends(get_db)):
     db_item = db.query(models.InventoryItem).filter(models.InventoryItem.id == item_id).first()
     if db_item is None:

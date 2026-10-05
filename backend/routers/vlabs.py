@@ -1,8 +1,14 @@
+from utils.uploads import read_pdf
+from pathlib import Path
+import re
+from utils.auth import require_role
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from fastapi.responses import FileResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
+from utils.validation import HTTPURL
 import json
 import os
 import uuid
@@ -41,12 +47,26 @@ class DepartmentResponse(BaseModel):
     class Config:
         from_attributes = True
 
-class VLabSubjectCreate(BaseModel):
+class ManualReference(BaseModel):
+    @field_validator("default_compiler", mode="before", check_fields=False)
+    @classmethod
+    def empty_compiler(cls, value):
+        return None if value == "" else value
+
+    @field_validator("lab_manual_url", check_fields=False)
+    @classmethod
+    def valid_manual(cls, value):
+        if value is not None and not re.fullmatch(r"/vlabs/lab-manuals/[0-9a-f]{32}\.[pP][dD][fF]", value):
+            raise ValueError("Use the lab manual upload endpoint")
+        return value
+
+
+class VLabSubjectCreate(ManualReference):
     name: str
     code: Optional[str] = None
     semester: int
     department_id: int
-    default_compiler: Optional[str] = None
+    default_compiler: Optional[HTTPURL] = None
     lab_manual_url: Optional[str] = None
 
 class VLabSubjectResponse(BaseModel):
@@ -61,16 +81,16 @@ class VLabSubjectResponse(BaseModel):
     class Config:
         from_attributes = True
 
-class VLabSubjectUpdate(BaseModel):
+class VLabSubjectUpdate(ManualReference):
     name: Optional[str] = None
     code: Optional[str] = None
     semester: Optional[int] = None
-    default_compiler: Optional[str] = None
+    default_compiler: Optional[HTTPURL] = None
     lab_manual_url: Optional[str] = None
 
 class SimulationLink(BaseModel):
     source: str
-    url: str
+    url: HTTPURL
     description: Optional[str] = None
 
 class VLabExperimentCreate(BaseModel):
@@ -114,7 +134,7 @@ def get_colleges(db: Session = Depends(get_db)):
     """Get all colleges"""
     return db.query(College).order_by(College.name).all()
 
-@router.post("/colleges", response_model=CollegeResponse)
+@router.post("/colleges", response_model=CollegeResponse, dependencies=[Depends(require_role("hod"))])
 def create_college(data: CollegeCreate, db: Session = Depends(get_db)):
     """Create a new college (admin only)"""
     # Check if already exists
@@ -128,7 +148,7 @@ def create_college(data: CollegeCreate, db: Session = Depends(get_db)):
     db.refresh(college)
     return college
 
-@router.delete("/colleges/{college_id}")
+@router.delete("/colleges/{college_id}", dependencies=[Depends(require_role("hod"))])
 def delete_college(college_id: int, db: Session = Depends(get_db)):
     """Delete a college and all its departments (admin only)"""
     college = db.query(College).filter(College.id == college_id).first()
@@ -158,7 +178,7 @@ def get_departments(
         query = query.filter(Department.college_id == college_id)
     return query.order_by(Department.name).all()
 
-@router.post("/departments", response_model=DepartmentResponse)
+@router.post("/departments", response_model=DepartmentResponse, dependencies=[Depends(require_role("hod"))])
 def create_department(data: DepartmentCreate, db: Session = Depends(get_db)):
     """Create a new department (admin only)"""
     # Check if college exists
@@ -180,7 +200,7 @@ def create_department(data: DepartmentCreate, db: Session = Depends(get_db)):
     db.refresh(department)
     return department
 
-@router.delete("/departments/{department_id}")
+@router.delete("/departments/{department_id}", dependencies=[Depends(require_role("hod"))])
 def delete_department(department_id: int, db: Session = Depends(get_db)):
     """Delete a department and all its subjects (admin only)"""
     department = db.query(Department).filter(Department.id == department_id).first()
@@ -212,7 +232,7 @@ def get_subjects(
         query = query.filter(VLabSubject.semester == semester)
     return query.order_by(VLabSubject.name).all()
 
-@router.post("/subjects", response_model=VLabSubjectResponse)
+@router.post("/subjects", response_model=VLabSubjectResponse, dependencies=[Depends(require_role("assistant"))])
 def create_subject(data: VLabSubjectCreate, db: Session = Depends(get_db)):
     """Create a new subject"""
     # Check if department exists
@@ -230,10 +250,9 @@ def create_subject(data: VLabSubjectCreate, db: Session = Depends(get_db)):
     db.add(subject)
     db.commit()
     db.refresh(subject)
-    db.refresh(subject)
     return subject
 
-@router.put("/subjects/{subject_id}", response_model=VLabSubjectResponse)
+@router.put("/subjects/{subject_id}", response_model=VLabSubjectResponse, dependencies=[Depends(require_role("assistant"))])
 def update_subject(subject_id: int, data: VLabSubjectUpdate, db: Session = Depends(get_db)):
     """Update a subject"""
     subject = db.query(VLabSubject).filter(VLabSubject.id == subject_id).first()
@@ -246,7 +265,7 @@ def update_subject(subject_id: int, data: VLabSubjectUpdate, db: Session = Depen
         subject.code = data.code
     if data.semester is not None:
         subject.semester = data.semester
-    if data.default_compiler is not None:
+    if "default_compiler" in data.model_fields_set:
         subject.default_compiler = data.default_compiler
     if data.lab_manual_url is not None:
         subject.lab_manual_url = data.lab_manual_url
@@ -255,7 +274,7 @@ def update_subject(subject_id: int, data: VLabSubjectUpdate, db: Session = Depen
     db.refresh(subject)
     return subject
 
-@router.delete("/subjects/{subject_id}")
+@router.delete("/subjects/{subject_id}", dependencies=[Depends(require_role("assistant"))])
 def delete_subject(subject_id: int, db: Session = Depends(get_db)):
     """Delete a subject and its experiments"""
     subject = db.query(VLabSubject).filter(VLabSubject.id == subject_id).first()
@@ -272,40 +291,40 @@ def delete_subject(subject_id: int, db: Session = Depends(get_db)):
 LAB_MANUALS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads", "lab_manuals")
 os.makedirs(LAB_MANUALS_DIR, exist_ok=True)
 
-@router.post("/subjects/{subject_id}/lab-manual")
+@router.post("/subjects/{subject_id}/lab-manual", dependencies=[Depends(require_role("assistant"))])
 async def upload_lab_manual(subject_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
     """Upload a lab manual PDF for a subject"""
     subject = db.query(VLabSubject).filter(VLabSubject.id == subject_id).first()
     if not subject:
         raise HTTPException(status_code=404, detail="Subject not found")
     
-    if not file.filename.lower().endswith('.pdf'):
-        raise HTTPException(status_code=400, detail="Only PDF files are allowed")
-    
-    # Generate unique filename
-    ext = os.path.splitext(file.filename)[1]
-    filename = f"{uuid.uuid4().hex}{ext}"
-    filepath = os.path.join(LAB_MANUALS_DIR, filename)
-    
-    contents = await file.read()
-    with open(filepath, "wb") as f:
-        f.write(contents)
-    
+    contents = await read_pdf(file)
+    filename = f"{uuid.uuid4().hex}.pdf"
+    filepath = Path(LAB_MANUALS_DIR) / filename
+    filepath.write_bytes(contents)
+
     # Update subject with manual URL
     manual_url = f"/vlabs/lab-manuals/{filename}"
     subject.lab_manual_url = manual_url
-    db.commit()
-    db.refresh(subject)
-    
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        filepath.unlink(missing_ok=True)
+        raise
     return {"success": True, "lab_manual_url": manual_url, "filename": file.filename}
 
 @router.get("/lab-manuals/{filename}")
 async def serve_lab_manual(filename: str):
     """Serve a lab manual PDF file"""
-    filepath = os.path.join(LAB_MANUALS_DIR, filename)
-    if not os.path.exists(filepath):
+    if not re.fullmatch(r"[0-9a-f]{32}\.[pP][dD][fF]", filename):
         raise HTTPException(status_code=404, detail="Lab manual not found")
-    return FileResponse(filepath, media_type="application/pdf")
+    directory = Path(LAB_MANUALS_DIR).resolve()
+    filepath = (directory / filename).resolve()
+    if filepath.parent != directory or not filepath.is_file():
+        raise HTTPException(status_code=404, detail="Lab manual not found")
+    return FileResponse(filepath, media_type="application/pdf", filename=filename,
+                        headers={"X-Content-Type-Options": "nosniff"})
 
 
 # ====== Experiment Endpoints ======
@@ -318,7 +337,7 @@ def get_experiments(
     db: Session = Depends(get_db)
 ):
     """Get experiments with filters"""
-    query = db.query(VLabExperiment).join(VLabSubject)
+    query = db.query(VLabExperiment).options(joinedload(VLabExperiment.subject)).join(VLabSubject)
     
     if subject_id:
         query = query.filter(VLabExperiment.subject_id == subject_id)
@@ -351,7 +370,7 @@ def get_experiments(
     
     return result
 
-@router.post("/experiments", response_model=VLabExperimentResponse)
+@router.post("/experiments", response_model=VLabExperimentResponse, dependencies=[Depends(require_role("assistant"))])
 def create_experiment(data: VLabExperimentCreate, db: Session = Depends(get_db)):
     """Create a new experiment"""
     subject = db.query(VLabSubject).filter(VLabSubject.id == data.subject_id).first()
@@ -359,7 +378,7 @@ def create_experiment(data: VLabExperimentCreate, db: Session = Depends(get_db))
         raise HTTPException(status_code=404, detail="Subject not found")
     
     # Process links
-    links_json = json.dumps([link.dict() for link in data.simulation_links])
+    links_json = json.dumps([link.model_dump() for link in data.simulation_links])
     
     experiment = VLabExperiment(
         subject_id=data.subject_id,
@@ -374,10 +393,12 @@ def create_experiment(data: VLabExperimentCreate, db: Session = Depends(get_db))
     db.refresh(experiment)
     
     # Parse back the links for response
-    experiment.simulation_links = json.loads(experiment.simulation_links) if experiment.simulation_links else []
-    return experiment
+    return {
+        **{column.name: getattr(experiment, column.name) for column in VLabExperiment.__table__.columns},
+        "simulation_links": json.loads(experiment.simulation_links) if experiment.simulation_links else [],
+    }
 
-@router.put("/experiments/{experiment_id}", response_model=VLabExperimentResponse)
+@router.put("/experiments/{experiment_id}", response_model=VLabExperimentResponse, dependencies=[Depends(require_role("assistant"))])
 def update_experiment(experiment_id: int, data: VLabExperimentUpdate, db: Session = Depends(get_db)):
     """Update an experiment"""
     experiment = db.query(VLabExperiment).filter(VLabExperiment.id == experiment_id).first()
@@ -393,16 +414,18 @@ def update_experiment(experiment_id: int, data: VLabExperimentUpdate, db: Sessio
     if data.suggested_simulation is not None:
         experiment.suggested_simulation = data.suggested_simulation
     if data.simulation_links is not None:
-        experiment.simulation_links = json.dumps([link.dict() for link in data.simulation_links])
+        experiment.simulation_links = json.dumps([link.model_dump() for link in data.simulation_links])
     
     db.commit()
     db.refresh(experiment)
     
     # Parse back links
-    experiment.simulation_links = json.loads(experiment.simulation_links) if experiment.simulation_links else []
-    return experiment
+    return {
+        **{column.name: getattr(experiment, column.name) for column in VLabExperiment.__table__.columns},
+        "simulation_links": json.loads(experiment.simulation_links) if experiment.simulation_links else [],
+    }
 
-@router.delete("/experiments/{experiment_id}")
+@router.delete("/experiments/{experiment_id}", dependencies=[Depends(require_role("assistant"))])
 def delete_experiment(experiment_id: int, db: Session = Depends(get_db)):
     """Delete an experiment"""
     experiment = db.query(VLabExperiment).filter(VLabExperiment.id == experiment_id).first()
@@ -416,7 +439,7 @@ def delete_experiment(experiment_id: int, db: Session = Depends(get_db)):
 
 # ====== Save Parsed Syllabus ======
 
-@router.post("/save")
+@router.post("/save", dependencies=[Depends(require_role("assistant"))])
 def save_to_vlabs(data: SaveToVLabsRequest, db: Session = Depends(get_db)):
     """Save parsed syllabus results to VLabs storage"""
     
@@ -442,6 +465,7 @@ def save_to_vlabs(data: SaveToVLabsRequest, db: Session = Depends(get_db)):
             # Create or find subject
             subject = db.query(VLabSubject).filter(
                 VLabSubject.name == subj_data.get("subject"),
+                func.coalesce(VLabSubject.code, "") == (subj_data.get("subject_code") or ""),
                 VLabSubject.department_id == data.department_id,
                 VLabSubject.semester == data.semester
             ).first()
@@ -455,8 +479,7 @@ def save_to_vlabs(data: SaveToVLabsRequest, db: Session = Depends(get_db)):
                     department_id=data.department_id
                 )
             db.add(subject)
-            db.commit()
-            db.refresh(subject)
+            db.flush()
         
             saved_subjects.append(subject.name)
         
@@ -490,7 +513,7 @@ def save_to_vlabs(data: SaveToVLabsRequest, db: Session = Depends(get_db)):
         print(f"Error saving to VLabs: {e}")
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Could not save syllabus")
     
     return {
         "success": True,

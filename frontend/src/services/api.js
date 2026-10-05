@@ -1,420 +1,95 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+export const API_URL = (import.meta.env?.VITE_API_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
 
-// Helper to get auth header
-const getAuthHeader = () => {
-    const token = localStorage.getItem('labsynk_token');
-    return token ? { 'Authorization': `Bearer ${token}` } : {};
+const queryString = (values) => {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(values)) {
+        if (value !== null && value !== undefined && value !== '') params.set(key, value);
+    }
+    return params.size ? `?${params}` : '';
 };
 
+// All API traffic shares authentication, error handling, and the configured origin.
+async function request(path, { method = 'GET', body, token, anonymous = false, signal } = {}) {
+    const headers = {};
+    const accessToken = anonymous ? null : (token ?? localStorage.getItem('labsynk_token'));
+    if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+    if (body !== undefined && !(body instanceof FormData)) {
+        headers['Content-Type'] = 'application/json';
+        body = JSON.stringify(body);
+    }
+    const response = await fetch(`${API_URL}${path}`, { method, headers, body, signal });
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        const detail = typeof error.detail === 'string' ? error.detail
+            : Array.isArray(error.detail) ? error.detail.map(item => item.msg).join('; ')
+                : `Request failed (${response.status})`;
+        throw new Error(detail);
+    }
+    return response.status === 204 ? null : response.json();
+}
+
+const upload = (path, file, options = {}) => {
+    const body = new FormData();
+    body.append('file', file);
+    return request(path, { ...options, method: 'POST', body });
+};
+const post = (path, body) => request(path, { method: 'POST', body });
+const put = (path, body) => request(path, { method: 'PUT', body });
+const remove = path => request(path, { method: 'DELETE' });
+
 export const api = {
-    // ====== Auth API ======
-    login: async (email, password) => {
-        const response = await fetch(`${API_URL}/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
-        });
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({}));
-            throw new Error(error.detail || 'Login failed');
-        }
-        return response.json();
-    },
+    login: (email, password) => request('/auth/login', {
+        method: 'POST', body: { email, password }, anonymous: true,
+    }),
+    checkAuth: token => request('/auth/check', { token }),
+    getUsers: () => request('/auth/users'),
+    getDirectory: () => request('/auth/directory'),
+    createUser: (email, password, role, department_id = null, name = null) =>
+        post('/auth/register', { email, password, role, department_id: department_id ? Number(department_id) : null, name }),
+    deleteUser: id => remove(`/auth/users/${id}`),
+    updateUser: (id, updates) => put(`/auth/users/${id}`, updates),
 
-    checkAuth: async (token) => {
-        const response = await fetch(`${API_URL}/auth/check`, {
-            headers: { 'Authorization': `Bearer ${token}` },
-        });
-        if (!response.ok) return { authenticated: false };
-        return response.json();
-    },
+    getInventory: (skip = 0, limit = 100, filters = {}) =>
+        request(`/inventory/${queryString({ ...filters, skip, limit })}`),
+    searchInventory: q => request(`/inventory/search${queryString({ q })}`),
+    createItem: item => post('/inventory/', item),
+    updateItem: (id, item) => put(`/inventory/${id}`, item),
+    deleteItem: id => remove(`/inventory/${id}`),
+    getSchedules: () => request('/schedule/'),
+    createSchedule: schedule => post('/schedule/', schedule),
+    deleteSchedule: id => remove(`/schedule/${id}`),
+    getLabRooms: () => request('/schedule/rooms'),
 
-    getUsers: async () => {
-        const response = await fetch(`${API_URL}/auth/users`, {
-            headers: getAuthHeader(),
-        });
-        if (!response.ok) throw new Error('Failed to fetch users');
-        return response.json();
-    },
+    uploadSyllabus: (file, options) => upload('/syllabus/upload', file, options),
+    manualSyllabus: data => post('/syllabus/manual', data),
+    chatWithAI: (query, context = '') => post('/ai/chat', { query, context }),
 
-    getDirectory: async () => {
-        const response = await fetch(`${API_URL}/auth/directory`, {
-            headers: getAuthHeader(),
-        });
-        if (!response.ok) throw new Error('Failed to fetch directory');
-        return response.json();
-    },
+    getColleges: () => request('/vlabs/colleges'),
+    createCollege: name => post('/vlabs/colleges', { name }),
+    deleteCollege: id => remove(`/vlabs/colleges/${id}`),
+    getDepartments: (college_id = null) => request(`/vlabs/departments${queryString({ college_id })}`),
+    createDepartment: (name, college_id) => post('/vlabs/departments', { name, college_id }),
+    deleteDepartment: id => remove(`/vlabs/departments/${id}`),
+    getSubjects: (department_id = null, semester = null) =>
+        request(`/vlabs/subjects${queryString({ department_id, semester })}`),
+    createSubject: subject => post('/vlabs/subjects', subject),
+    updateSubject: (id, data) => put(`/vlabs/subjects/${id}`, data),
+    deleteSubject: id => remove(`/vlabs/subjects/${id}`),
+    getVLabExperiments: (subject_id = null, department_id = null, semester = null) =>
+        request(`/vlabs/experiments${queryString({ subject_id, department_id, semester })}`),
+    createExperiment: experiment => post('/vlabs/experiments', experiment),
+    updateExperiment: (id, data) => put(`/vlabs/experiments/${id}`, data),
+    deleteExperiment: id => remove(`/vlabs/experiments/${id}`),
+    saveToVLabs: (college_id, department_id, semester, subjects) =>
+        post('/vlabs/save', { college_id, department_id, semester, subjects }),
+    uploadLabManual: (subjectId, file) => upload(`/vlabs/subjects/${subjectId}/lab-manual`, file),
 
-    createUser: async (email, password, role, department_id = null, name = null) => {
-        const body = { email, password, role };
-        if (department_id) body.department_id = parseInt(department_id);
-        if (name) body.name = name;
-        const response = await fetch(`${API_URL}/auth/register`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-            body: JSON.stringify(body),
-        });
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({}));
-            throw new Error(error.detail || 'Failed to create user');
-        }
-        return response.json();
-    },
-
-    deleteUser: async (userId) => {
-        const response = await fetch(`${API_URL}/auth/users/${userId}`, {
-            method: 'DELETE',
-            headers: getAuthHeader(),
-        });
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({}));
-            throw new Error(error.detail || 'Failed to delete user');
-        }
-        return response.json();
-    },
-
-    updateUser: async (userId, updates) => {
-        const response = await fetch(`${API_URL}/auth/users/${userId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                ...getAuthHeader(),
-            },
-            body: JSON.stringify(updates),
-        });
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({}));
-            throw new Error(error.detail || 'Failed to update user');
-        }
-        return response.json();
-    },
-
-    // ====== Inventory API ======
-    getInventory: async (skip = 0, limit = 100) => {
-        const response = await fetch(`${API_URL}/inventory/?skip=${skip}&limit=${limit}`);
-        if (!response.ok) throw new Error('Failed to fetch inventory');
-        return response.json();
-    },
-
-    searchInventory: async (query) => {
-        const response = await fetch(`${API_URL}/inventory/search?q=${query}`);
-        if (!response.ok) throw new Error('Failed to search inventory');
-        return response.json();
-    },
-
-    createItem: async (item) => {
-        const response = await fetch(`${API_URL}/inventory/`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(item),
-        });
-        if (!response.ok) throw new Error('Failed to create item');
-        return response.json();
-    },
-
-    updateItem: async (id, item) => {
-        const response = await fetch(`${API_URL}/inventory/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(item),
-        });
-        if (!response.ok) throw new Error('Failed to update item');
-        return response.json();
-    },
-
-    getSchedules: async () => {
-        const response = await fetch(`${API_URL}/schedule/`);
-        if (!response.ok) throw new Error('Failed to fetch schedules');
-        return response.json();
-    },
-
-    createSchedule: async (schedule) => {
-        const response = await fetch(`${API_URL}/schedule/`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(schedule),
-        });
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.detail || 'Failed to create schedule');
-        }
-        return response.json();
-    },
-
-    getLabRooms: async () => {
-        const response = await fetch(`${API_URL}/schedule/rooms`);
-        if (!response.ok) throw new Error('Failed to fetch lab rooms');
-        return response.json();
-    },
-
-    uploadSyllabus: async (file) => {
-        const formData = new FormData();
-        formData.append('file', file);
-        const response = await fetch(`${API_URL}/syllabus/upload`, {
-            method: 'POST',
-            body: formData,
-        });
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.detail || 'Failed to parse syllabus');
-        }
-        return response.json();
-    },
-
-    manualSyllabus: async (data) => {
-        const response = await fetch(`${API_URL}/syllabus/manual`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-        });
-        if (!response.ok) throw new Error('Failed to process manual syllabus');
-        return response.json();
-    },
-
-    chatWithAI: async (query, context = "") => {
-        const response = await fetch(`${API_URL}/ai/chat`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query, context }),
-        });
-        if (!response.ok) throw new Error('Failed to get AI response');
-        return response.json();
-    },
-
-    // ====== VLabs API ======
-
-    getColleges: async () => {
-        const response = await fetch(`${API_URL}/vlabs/colleges`);
-        if (!response.ok) throw new Error('Failed to fetch colleges');
-        return response.json();
-    },
-
-    createCollege: async (name) => {
-        const response = await fetch(`${API_URL}/vlabs/colleges`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name }),
-        });
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({}));
-            throw new Error(error.detail || 'Failed to create college');
-        }
-        return response.json();
-    },
-
-    getDepartments: async (collegeId = null) => {
-        const url = collegeId
-            ? `${API_URL}/vlabs/departments?college_id=${collegeId}`
-            : `${API_URL}/vlabs/departments`;
-        const response = await fetch(url);
-        if (!response.ok) throw new Error('Failed to fetch departments');
-        return response.json();
-    },
-
-    createDepartment: async (name, collegeId) => {
-        const response = await fetch(`${API_URL}/vlabs/departments`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, college_id: collegeId }),
-        });
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({}));
-            throw new Error(error.detail || 'Failed to create department');
-        }
-        return response.json();
-    },
-
-    deleteCollege: async (collegeId) => {
-        const response = await fetch(`${API_URL}/vlabs/colleges/${collegeId}`, {
-            method: 'DELETE',
-        });
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({}));
-            throw new Error(error.detail || 'Failed to delete college');
-        }
-        return response.json();
-    },
-
-    deleteDepartment: async (departmentId) => {
-        const response = await fetch(`${API_URL}/vlabs/departments/${departmentId}`, {
-            method: 'DELETE',
-        });
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({}));
-            throw new Error(error.detail || 'Failed to delete department');
-        }
-        return response.json();
-    },
-
-    getSubjects: async (departmentId = null, semester = null) => {
-        const params = new URLSearchParams();
-        if (departmentId) params.append('department_id', departmentId);
-        if (semester) params.append('semester', semester);
-        const url = `${API_URL}/vlabs/subjects${params.toString() ? '?' + params.toString() : ''}`;
-        const response = await fetch(url);
-        if (!response.ok) throw new Error('Failed to fetch subjects');
-        return response.json();
-    },
-
-    getVLabExperiments: async (subjectId = null, departmentId = null, semester = null) => {
-        const params = new URLSearchParams();
-        if (subjectId) params.append('subject_id', subjectId);
-        if (departmentId) params.append('department_id', departmentId);
-        if (semester) params.append('semester', semester);
-        const url = `${API_URL}/vlabs/experiments${params.toString() ? '?' + params.toString() : ''}`;
-        const response = await fetch(url);
-        if (!response.ok) throw new Error('Failed to fetch experiments');
-        return response.json();
-    },
-
-    createSubject: async (subject) => {
-        const response = await fetch(`${API_URL}/vlabs/subjects`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(subject),
-        });
-        if (!response.ok) throw new Error('Failed to create subject');
-        return response.json();
-    },
-
-    updateSubject: async (id, data) => {
-        const response = await fetch(`${API_URL}/vlabs/subjects/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-        });
-        if (!response.ok) throw new Error('Failed to update subject');
-        return response.json();
-    },
-
-    deleteSubject: async (id) => {
-        const response = await fetch(`${API_URL}/vlabs/subjects/${id}`, {
-            method: 'DELETE',
-        });
-        if (!response.ok) throw new Error('Failed to delete subject');
-        return response.json();
-    },
-
-    createExperiment: async (experiment) => {
-        const response = await fetch(`${API_URL}/vlabs/experiments`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(experiment),
-        });
-        if (!response.ok) throw new Error('Failed to create experiment');
-        return response.json();
-    },
-
-    updateExperiment: async (id, data) => {
-        const response = await fetch(`${API_URL}/vlabs/experiments/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-        });
-        if (!response.ok) throw new Error('Failed to update experiment');
-        return response.json();
-    },
-
-    deleteExperiment: async (id) => {
-        const response = await fetch(`${API_URL}/vlabs/experiments/${id}`, {
-            method: 'DELETE',
-        });
-        if (!response.ok) throw new Error('Failed to delete experiment');
-        return response.json();
-    },
-
-    saveToVLabs: async (collegeId, departmentId, semester, subjects) => {
-        const response = await fetch(`${API_URL}/vlabs/save`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                college_id: collegeId,
-                department_id: departmentId,
-                semester: semester,
-                subjects: subjects
-            }),
-        });
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({}));
-            throw new Error(error.detail || 'Failed to save to VLabs');
-        }
-        return response.json();
-    },
-
-    // ====== Lab Manual API ======
-    uploadLabManual: async (subjectId, file) => {
-        const formData = new FormData();
-        formData.append('file', file);
-        const response = await fetch(`${API_URL}/vlabs/subjects/${subjectId}/lab-manual`, {
-            method: 'POST',
-            body: formData,
-        });
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({}));
-            throw new Error(error.detail || 'Failed to upload lab manual');
-        }
-        return response.json();
-    },
-
-    // ====== Student Engagement API ======
-    suggestResource: async (data) => {
-        const response = await fetch(`${API_URL}/engagement/resources/suggest`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-            body: JSON.stringify(data),
-        });
-        if (!response.ok) throw new Error('Failed to submit suggestion');
-        return response.json();
-    },
-
-    getSuggestions: async () => {
-        const response = await fetch(`${API_URL}/engagement/resources/all`, {
-            headers: getAuthHeader(),
-        });
-        if (!response.ok) throw new Error('Failed to fetch suggestions');
-        return response.json();
-    },
-
-    updateSuggestionStatus: async (id, status) => {
-        const response = await fetch(`${API_URL}/engagement/resources/${id}/status?status=${status}`, {
-            method: 'PUT',
-            headers: getAuthHeader(),
-        });
-        if (!response.ok) throw new Error('Failed to update status');
-        return response.json();
-    },
-
-    reportInventoryIssue: async (data, token = null) => {
-        const headers = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-        else {
-            const auth = getAuthHeader();
-            if (auth.Authorization) headers['Authorization'] = auth.Authorization;
-        }
-
-        const response = await fetch(`${API_URL}/engagement/inventory/report`, {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify(data),
-        });
-        if (!response.ok) throw new Error('Failed to report issue');
-        return response.json();
-    },
-
-    getInventoryReports: async () => {
-        const response = await fetch(`${API_URL}/engagement/inventory/reports`, {
-            headers: getAuthHeader(),
-        });
-        if (!response.ok) throw new Error('Failed to fetch reports');
-        return response.json();
-    },
-
-    updateReportStatus: async (id, status) => {
-        const response = await fetch(`${API_URL}/engagement/inventory/reports/${id}/status?status=${status}`, {
-            method: 'PUT',
-            headers: getAuthHeader(),
-        });
-        if (!response.ok) throw new Error('Failed to update status');
-        return response.json();
-    },
+    suggestResource: data => post('/engagement/resources/suggest', data),
+    getSuggestions: () => request('/engagement/resources/suggestions'),
+    updateSuggestionStatus: (id, status) => request(
+        `/engagement/resources/suggestions/${id}/status${queryString({ status })}`, { method: 'PATCH' }),
+    reportInventoryIssue: (data, token) => request('/engagement/inventory/report', { method: 'POST', body: data, token }),
+    getInventoryReports: () => request('/engagement/inventory/reports'),
+    updateReportStatus: (id, status) => request(
+        `/engagement/inventory/reports/${id}/status${queryString({ status })}`, { method: 'PATCH' }),
 };

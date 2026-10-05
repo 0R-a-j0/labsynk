@@ -8,7 +8,7 @@ import sys
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from backend.services.syllabus_service import parse_syllabus_with_pdfplumber
+from services.syllabus_service import parse_syllabus_with_pdfplumber
 
 
 class TestPdfPlumberParser:

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { api } from '../services/api';
+import { api, API_URL } from '../services/api';
 import { BookOpen, Filter, ExternalLink, Search, ChevronDown, Beaker, Code, FileText } from 'lucide-react';
 
 const VirtualLabs = () => {
@@ -125,7 +125,7 @@ const VirtualLabs = () => {
                                 </div>
                             </div>
                             <a
-                                href={`http://127.0.0.1:8000${currentSubject.lab_manual_url}`}
+                                href={`${API_URL}${currentSubject.lab_manual_url}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="btn-primary flex items-center gap-2 text-sm"

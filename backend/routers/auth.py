@@ -3,13 +3,15 @@ Authentication Router - Login, Register, User Management
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field, field_validator
+import os
 from typing import Optional, List
 from datetime import timedelta
 
 from database import get_db
 from models import User
 from utils.auth import (
+    password_version,
     get_password_hash, 
     verify_password, 
     create_access_token,
@@ -28,13 +30,22 @@ router = APIRouter(
 
 # ====== Pydantic Schemas ======
 
+class PasswordInput(BaseModel):
+    @field_validator("password", check_fields=False)
+    @classmethod
+    def validate_password(cls, value):
+        if value is not None and not 12 <= len(value.encode("utf-8")) <= 72:
+            raise ValueError("Password must contain 12 to 72 UTF-8 bytes")
+        return value
+
+
 class UserLogin(BaseModel):
-    email: str
-    password: str
+    email: EmailStr
+    password: str = Field(min_length=1, max_length=72)
 
 
-class UserRegister(BaseModel):
-    email: str
+class UserRegister(PasswordInput):
+    email: EmailStr
     password: str
     role: str = "assistant"  # Default to lab assistant
     name: Optional[str] = None
@@ -58,8 +69,9 @@ class TokenResponse(BaseModel):
     user: UserResponse
 
 
-class UserUpdate(BaseModel):
-    email: Optional[str] = None
+class UserUpdate(PasswordInput):
+    email: Optional[EmailStr] = None
+    name: Optional[str] = Field(default=None, max_length=200)
     role: Optional[str] = None
     password: Optional[str] = None
     department_id: Optional[int] = None
@@ -68,22 +80,23 @@ class UserUpdate(BaseModel):
 # ====== Default Admin Creation ======
 
 def create_default_admin(db: Session):
-    """Create default admin account if it doesn't exist"""
-    admin_email = "admin@labsynk.com"
-    existing = db.query(User).filter(User.email == admin_email).first()
-    
-    if not existing:
-        admin = User(
-            email=admin_email,
-            hashed_password=get_password_hash("LABSYNkT3ST!"),
-            role="principal",  # Highest access
-            name="Principal"
-        )
-        db.add(admin)
-        db.commit()
-        print(f"✅ Default admin created: {admin_email}")
-        return True
-    return False
+    """Provision an administrator only with explicitly supplied credentials."""
+    admin_email = os.getenv("BOOTSTRAP_ADMIN_EMAIL")
+    admin_password = os.getenv("BOOTSTRAP_ADMIN_PASSWORD")
+    if not admin_email and not admin_password:
+        return False
+    if not admin_email or not admin_password:
+        raise RuntimeError("Both bootstrap administrator settings are required")
+    try:
+        data = UserRegister(email=admin_email, password=admin_password, role="principal")
+    except ValueError:
+        raise RuntimeError("Invalid bootstrap administrator email or password") from None
+    if db.query(User).filter(User.email == data.email).first():
+        return False
+    db.add(User(email=data.email, hashed_password=get_password_hash(data.password),
+                role="principal", name="Principal"))
+    db.commit()
+    return True
 
 
 # ====== Auth Endpoints ======
@@ -101,7 +114,7 @@ def login(data: UserLogin, db: Session = Depends(get_db)):
     
     # Create access token
     access_token = create_access_token(
-        data={"sub": user.email, "role": user.role},
+        data={"sub": str(user.id), "pwd": password_version(user.hashed_password)},
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     
@@ -234,7 +247,16 @@ def update_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
+    if current_user.role != "principal":
+        actor_level = ROLE_HIERARCHY[current_user.role]
+        if ROLE_HIERARCHY.get(user.role, -1) >= actor_level:
+            raise HTTPException(status_code=403, detail="Cannot modify an equal or higher role")
+        if data.role is not None and ROLE_HIERARCHY.get(data.role, -1) >= actor_level:
+            raise HTTPException(status_code=403, detail="Cannot assign an equal or higher role")
     if data.email:
+        existing = db.query(User).filter(User.email == data.email, User.id != user_id).first()
+        if existing:
+            raise HTTPException(status_code=409, detail="Email already registered")
         user.email = data.email
     if data.role:
         if data.role not in ROLE_HIERARCHY:

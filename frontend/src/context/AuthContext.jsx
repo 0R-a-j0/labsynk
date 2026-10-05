@@ -24,29 +24,33 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const [token, setToken] = useState(localStorage.getItem('labsynk_token'));
 
-    // Check auth status on mount
     useEffect(() => {
-        checkAuth();
-    }, []);
-
-    const checkAuth = async () => {
+        let active = true;
         const savedToken = localStorage.getItem('labsynk_token');
-        if (savedToken) {
+        const restoreSession = async () => {
             try {
-                const data = await api.checkAuth(savedToken);
+                const data = savedToken ? await api.checkAuth(savedToken) : { authenticated: false };
+                if (!active) return;
                 if (data.authenticated) {
                     setUser(data.user);
                     setToken(savedToken);
                 } else {
-                    logout();
+                    localStorage.removeItem('labsynk_token');
+                    setToken(null);
+                    setUser(null);
                 }
-            } catch (err) {
-                console.error('Auth check failed:', err);
-                logout();
+            } catch {
+                if (!active) return;
+                localStorage.removeItem('labsynk_token');
+                setToken(null);
+                setUser(null);
+            } finally {
+                if (active) setLoading(false);
             }
-        }
-        setLoading(false);
-    };
+        };
+        restoreSession();
+        return () => { active = false; };
+    }, []);
 
     const login = async (email, password) => {
         const data = await api.login(email, password);
@@ -66,8 +70,8 @@ export const AuthProvider = ({ children }) => {
     const isAuthenticated = () => !!user;
 
     const hasRole = (requiredRole) => {
-        if (!user) return false;
-        const userLevel = ROLE_LEVELS[user.role] || 0;
+        if (!user || !(requiredRole in ROLE_LEVELS)) return false;
+        const userLevel = ROLE_LEVELS[user.role] ?? -1;
         const requiredLevel = ROLE_LEVELS[requiredRole] || 0;
         return userLevel >= requiredLevel;
     };

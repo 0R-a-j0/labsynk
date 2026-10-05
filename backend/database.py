@@ -1,9 +1,9 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-import os
+from core.config import settings
 
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./labsynk.db")
+SQLALCHEMY_DATABASE_URL = settings.DATABASE_URL
 
 # Handle Render's postgres:// vs postgresql://
 if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
@@ -13,10 +13,8 @@ if "sqlite" in SQLALCHEMY_DATABASE_URL:
     connect_args = {"check_same_thread": False}
 else:
     # For PostgreSQL (Neon/Render/Supabase), ensure SSL is used
-    # "prepare_threshold": None is CRITICAL for Supabase Transaction Mode (Port 6543)
     connect_args = {
-        "sslmode": "require",
-        "prepare_threshold": None
+        "sslmode": "require"
     }
 
 engine = create_engine(

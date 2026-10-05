@@ -14,7 +14,7 @@ import json
 def get_gemini_client():
     if not HAS_GENAI or not settings.GEMINI_API_KEY:
         return None
-    return genai.Client(api_key=settings.GEMINI_API_KEY)
+    return genai.Client(api_key=settings.GEMINI_API_KEY, http_options={"timeout": 30000})
 
 async def parse_syllabus_pdf(pdf_text: str):
     """
@@ -42,7 +42,7 @@ async def parse_syllabus_pdf(pdf_text: str):
     """ # Truncate to avoid token limits if necessary
 
     try:
-        response = client.models.generate_content(
+        response = await client.aio.models.generate_content(
             model='gemini-2.0-flash',
             contents=prompt
         )
@@ -68,7 +68,7 @@ async def chat_with_student(query: str, context: str = ""):
     Student Question: {query}
     """
     
-    response = client.models.generate_content(
+    response = await client.aio.models.generate_content(
         model='gemini-2.0-flash',
         contents=prompt
     )

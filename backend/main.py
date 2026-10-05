@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from utils.request_limits import RequestLimitsMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
@@ -39,7 +40,9 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="LABSYNk API", version="1.0.0")
 
-# CORS Setup - Allow all localhost ports for development
+app.add_middleware(RequestLimitsMiddleware)
+
+# Explicit development and deployment origins
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
